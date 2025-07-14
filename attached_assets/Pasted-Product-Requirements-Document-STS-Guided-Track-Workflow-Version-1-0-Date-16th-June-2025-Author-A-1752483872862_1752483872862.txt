@@ -1,0 +1,72 @@
+Product Requirements Document: STS Guided Track Workflow
+Version: 1.0
+Date: 16th June 2025
+Author: AI Analysis of Meeting Audio
+1. Introduction & Overview
+This document outlines the requirements for a new platform feature: the "STS (Speech-to-Speech) Guided Track" workflow. The primary objective is to create a secure, scalable, and self-contained environment for external dubbing vendors (studios and voice artists) to produce high-quality dubbed content. This feature will replace the current ad-hoc process that relies on granting vendors access to third-party tools like ElevenLabs, thereby enhancing security and operational efficiency.
+2. Problem Statement
+The current method for handling urgent or specialized dubbing projects presents several challenges:
+Security Risk: Providing external vendors with direct access to third-party accounts (e.g., ElevenLabs) exposes valuable voice clone assets and is a significant security concern.
+Lack of Scalability: The process of onboarding vendors, granting access, and manually managing assets is time-consuming and not scalable as the network of delivery partners grows.
+Operational Bottleneck: The final video compilation, which involves merging the dubbed audio with the source video, must be performed by an internal editor, creating a bottleneck in the delivery pipeline.
+Fragmented Workflow: The process is split across multiple platforms (vendor's recording software, third-party STS tool, internal editing software), leading to inefficiency and lack of central oversight.
+3. Goals & Objectives
+The success of this feature will be measured by its ability to:
+Enhance Security: Eliminate the need for vendors to access or use any external STS tools, keeping all assets and processes within our platform.
+Improve Efficiency: Reduce the end-to-end turnaround time by allowing vendors to manage the entire process from recording to final compilation.
+Increase Scalability: Streamline the onboarding and management of dubbing vendors, enabling the system to handle a larger volume of projects.
+Empower Vendors: Provide vendors with a professional, end-to-end toolkit, giving them greater control and responsibility over the final quality of their work.
+4. User Personas
+Vendor / Artist (External User): The primary user. A professional voice artist or studio responsible for recording dialogue, applying voice clones, and ensuring the final audio is perfectly synced.
+Project Manager (Internal Admin): The internal user responsible for creating and assigning jobs, monitoring progress, managing project assets, and downloading the final deliverable.
+5. Functional Requirements (User Stories)
+5.1. Job & Project Management (For Project Manager)
+As a Project Manager, I want to create a new job type called "STS Guided Track" so that I can assign dubbing projects that follow this specific workflow.
+As a Project Manager, I want to upload a source video file to the job, which will serve as the reference for the vendor.
+As a Project Manager, I want to be able to assign the "STS Guided Track" job to a specific external vendor.
+As a Project Manager, I want to view the status of the job (e.g., In Progress, Submitted, Needs Rework) to track its progress.
+As a Project Manager, I want to download the final, compiled MP4 video submitted by the vendor for final QC and delivery.
+5.2. Vendor Dubbing Workflow (For Vendor/Artist)
+As a Vendor, I want to access a dedicated interface/workspace for my assigned "STS Guided Track" job.
+As a Vendor, I want to be able to play the source video on the platform to use as a reference for timing and lip-sync while I record in my own studio.
+As a Vendor, I want an interface to upload multiple individual audio tracks (e.g., in WAV/MP3 format) for each character in the video.
+As a Vendor, I want to be able to apply a pre-assigned voice clone to each of my uploaded raw audio tracks to generate the STS audio. The system should process the audio and replace the raw track with the STS version.
+As a Vendor, I want to be able to delete an unsatisfactory track and re-upload a new version to iterate on the performance.
+As a Vendor, I want a multi-track timeline editor where I can see the video waveform and all my audio layers, allowing me to check for sync and overall quality.
+As a Vendor, I want to use solo and mute controls on each audio track to isolate specific character dialogues for precise review.
+As a Vendor, once I am satisfied with all the audio tracks, I want a function to "Compile and Export" a final video, which merges all my approved audio tracks with the source video into a single MP4 file.
+As a Vendor, I want to be able to submit this final compiled video to the Project Manager for approval, completing the job.
+6. UI/UX Design & Non-Functional Requirements
+6.1. UI/UX Considerations
+Workflow Interface: The design should be inspired by professional but simple audio/video editors (reference "Deepdub" was mentioned).
+A main video player at the top.
+A timeline view below showing the video waveform.
+A layered, multi-track section for audio.
+Track Controls: Each audio layer must have:
+An editable track name (e.g., "Speaker 1 - Character Name").
+[Solo] Button: Plays only this track with the video.
+[Mute] Button: Mutes this track during playback.
+[Upload] Button: To upload the raw audio file.
+[Apply STS] Button/Action: To process the raw audio.
+[Delete] Button: To remove the track.
+Export Function: A clear and accessible button to initiate the final video compilation process.
+6.2. Non-Functional Requirements
+Security: The vendor's environment must be sandboxed. They have no direct access to the underlying STS models or third-party API keys. All processing happens server-side.
+Performance: Video playback must be smooth. The STS processing and final video compilation should be completed within a reasonable timeframe.
+File Handling: The system must support the upload and processing of large video and audio files (up to the platform's standard limits, e.g., 2GB).
+Usability: The interface must be intuitive for voice artists who may not be highly technical.
+7. Scope: MVP vs. Future Enhancements
+7.1. In-Scope for MVP (Version 1.0)
+Creation of the "STS Guided Track" job type.
+Vendor interface for uploading multiple audio tracks.
+Server-side STS application on uploaded audio.
+Timeline editor with playback, solo, and mute functionality.
+Function to compile all audio tracks and the source video into a final MP4 for download/submission.
+7.2. Out-of-Scope for MVP (Future Versions)
+Direct In-Platform Recording: Recording audio directly from a microphone within the platform.
+Advanced Audio Mixing: Controls for volume balancing, fading, or background music mixing. The MVP assumes all tracks are merged at their original volume.
+SRT / Transcript Generation: This workflow bypasses the need for transcripts or SRT files.
+8. Assumptions & Dependencies
+The platform already has a system for managing and assigning specific voice clones to projects/vendors.
+The existing project management and billing systems can be extended to accommodate this new job type.
+The server infrastructure is capable of handling intensive media processing tasks (e.g., running FFmpeg for video compilation).
