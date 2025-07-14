@@ -1,19 +1,32 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { Bot, Scissors } from "lucide-react";
 
 interface WaveformProps {
   data?: number[];
   isActive?: boolean;
   height?: number;
   onContextMenu?: (event: React.MouseEvent) => void;
+  onSelectionSTS?: (startTime: number, endTime: number) => void;
+  onTextToSpeech?: (text: string, startTime: number, endTime: number) => void;
 }
 
 export default function Waveform({ 
   data = [], 
   isActive = false, 
   height = 60,
-  onContextMenu 
+  onContextMenu,
+  onSelectionSTS,
+  onTextToSpeech
 }: WaveformProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
+  const [showTextDialog, setShowTextDialog] = useState(false);
+  const [textInput, setTextInput] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState<{ start: number; end: number } | null>(null);
 
   // Generate sample waveform data if none provided
   const generateSampleData = (length: number = 100) => {
@@ -25,6 +38,67 @@ export default function Waveform({
   };
 
   const waveformData = data.length > 0 ? data : generateSampleData();
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (!isActive) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const normalizedX = x / canvas.width;
+    
+    setIsSelecting(true);
+    setSelection({ start: normalizedX, end: normalizedX });
+  }, [isActive]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isSelecting || !selection) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const normalizedX = x / canvas.width;
+    
+    setSelection({ ...selection, end: normalizedX });
+  }, [isSelecting, selection]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isSelecting || !selection) return;
+    setIsSelecting(false);
+    
+    const start = Math.min(selection.start, selection.end);
+    const end = Math.max(selection.start, selection.end);
+    
+    // Only create selection if it's meaningful (more than 1% of waveform)
+    if (end - start > 0.01) {
+      setSelectedRegion({ start, end });
+    } else {
+      setSelection(null);
+    }
+  }, [isSelecting, selection]);
+
+  const handleCutWaveform = () => {
+    if (!selectedRegion) return;
+    setShowTextDialog(true);
+  };
+
+  const handleSTSGenerate = () => {
+    if (!selectedRegion) return;
+    onSelectionSTS?.(selectedRegion.start, selectedRegion.end);
+    setSelectedRegion(null);
+    setSelection(null);
+  };
+
+  const handleTextToSpeechGenerate = () => {
+    if (!selectedRegion || !textInput.trim()) return;
+    onTextToSpeech?.(textInput, selectedRegion.start, selectedRegion.end);
+    setShowTextDialog(false);
+    setTextInput("");
+    setSelectedRegion(null);
+    setSelection(null);
+  };
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -62,9 +136,30 @@ export default function Waveform({
       const x = index * barWidth;
       const y = (canvasHeight - barHeight) / 2;
       
+      // Check if this bar is in the selection
+      const barStart = index / waveformData.length;
+      const barEnd = (index + 1) / waveformData.length;
+      const isInSelection = selection && (
+        (barStart >= Math.min(selection.start, selection.end) && barStart <= Math.max(selection.start, selection.end)) ||
+        (barEnd >= Math.min(selection.start, selection.end) && barEnd <= Math.max(selection.start, selection.end))
+      );
+      
+      const isInFinalSelection = selectedRegion && (
+        (barStart >= selectedRegion.start && barStart <= selectedRegion.end) ||
+        (barEnd >= selectedRegion.start && barEnd <= selectedRegion.end)
+      );
+      
+      if (isInFinalSelection) {
+        ctx.fillStyle = 'hsl(45, 90%, 60%)'; // Yellow for final selection
+      } else if (isInSelection) {
+        ctx.fillStyle = 'hsl(120, 90%, 60%)'; // Green for current selection
+      } else {
+        ctx.fillStyle = gradient;
+      }
+      
       ctx.fillRect(x, y, Math.max(1, barWidth - 1), barHeight);
     });
-  }, [waveformData, isActive]);
+  }, [waveformData, isActive, selection, selectedRegion]);
 
   if (!isActive) {
     return (
@@ -82,17 +177,91 @@ export default function Waveform({
   }
 
   return (
-    <div 
-      className="waveform-active rounded-lg overflow-hidden cursor-pointer"
-      style={{ height }}
-      onContextMenu={onContextMenu}
-    >
-      <canvas
-        ref={canvasRef}
-        width={600}
-        height={height}
-        className="w-full h-full"
-      />
-    </div>
+    <>
+      <div className="relative">
+        <div 
+          className="waveform-active rounded-lg overflow-hidden cursor-crosshair"
+          style={{ height }}
+          onContextMenu={onContextMenu}
+        >
+          <canvas
+            ref={canvasRef}
+            width={600}
+            height={height}
+            className="w-full h-full"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          />
+        </div>
+        
+        {/* Selection Controls */}
+        {selectedRegion && (
+          <div className="absolute top-2 right-2 flex space-x-2">
+            <Button
+              size="sm"
+              onClick={handleSTSGenerate}
+              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+              title="Generate STS for selection"
+            >
+              <Bot className="w-3 h-3" />
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleCutWaveform}
+              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg"
+              title="Add text to selection"
+            >
+              <Scissors className="w-3 h-3" />
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Text-to-Speech Dialog */}
+      <Dialog open={showTextDialog} onOpenChange={setShowTextDialog}>
+        <DialogContent className="bg-gray-800 border-gray-700 text-white">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold">Add Text for Speech Generation</DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-4 mt-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Enter text to generate speech for the selected region:
+              </label>
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Type the text you want to convert to speech..."
+                className="bg-gray-700 border-gray-600 text-white min-h-[100px]"
+                autoFocus
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end space-x-3 mt-6">
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowTextDialog(false);
+                setTextInput("");
+              }}
+              className="border-gray-600 text-gray-300 hover:bg-gray-700"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleTextToSpeechGenerate}
+              disabled={!textInput.trim()}
+              className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+            >
+              <Bot className="w-4 h-4 mr-2" />
+              Generate Speech
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

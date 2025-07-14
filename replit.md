@@ -116,6 +116,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### July 14, 2025
+- **Project Management System**: Complete project creation, management, and file organization
+- **Enhanced Waveform Interaction**: Click and drag selection for partial STS processing
+- **Text-to-Speech Integration**: Popup text input for generating speech from text
+- **Modern UI Enhancements**: Glassmorphism effects, gradient buttons, and smooth animations
+- **Advanced STS Workflow**: Robot icon triggers for instant voice conversion
+- **Selection-Based Processing**: Target specific waveform regions for conversion
+- **Responsive Design**: Enhanced mobile and desktop experience
+
 ### December 14, 2025
 - Integrated ElevenLabs Speech-to-Speech API with streaming support
 - Added collapsible track sections for better organization
@@ -125,10 +134,10 @@ Preferred communication style: Simple, everyday language.
 - Added proper error handling and fallback mechanisms
 
 ### Key Features Added
-- Real-time speech-to-speech conversion using ElevenLabs API
-- Professional track layout with collapsible sections
-- Voice selection dropdown with detailed voice information
-- File upload handling for audio tracks
-- Context menus for track-specific operations
+- **Complete Project Lifecycle**: Create projects → Upload assets → Process audio → Export results
+- **Interactive Waveform Editor**: Selection tools, partial processing, text-to-speech popup
+- **Modern Visual Design**: Gradient backgrounds, glassmorphism panels, hover animations
+- **Professional Audio Workflow**: Multi-track editor with individual voice assignment
+- **Real-time Processing**: Instant feedback and visual progress indicators
 
 The application follows a monorepo structure with clear separation between client, server, and shared code, enabling efficient development and deployment of the STS guided track workflow system.

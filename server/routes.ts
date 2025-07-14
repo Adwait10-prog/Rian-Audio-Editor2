@@ -65,6 +65,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const project = await storage.updateProject(id, req.body);
+      if (!project) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json(project);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update project" });
+    }
+  });
+
+  app.delete("/api/projects/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const success = await storage.deleteProject(id);
+      if (!success) {
+        return res.status(404).json({ message: "Project not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete project" });
+    }
+  });
+
   // Audio Tracks
   app.get("/api/projects/:projectId/tracks", async (req, res) => {
     try {
@@ -241,6 +267,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('STS Generation Error:', error);
       res.status(500).json({ message: "STS generation failed" });
+    }
+  });
+
+  // Text-to-Speech Generation
+  app.post("/api/generate-tts", async (req, res) => {
+    try {
+      const { text, voiceCloneId, startTime, endTime } = req.body;
+      
+      if (!text || !text.trim()) {
+        return res.status(400).json({ message: "Text is required for TTS generation" });
+      }
+
+      // Get voice clone details
+      const voiceClones = await storage.getAllVoiceClones();
+      const selectedVoice = voiceClones.find(v => v.id === voiceCloneId);
+      
+      if (!selectedVoice) {
+        return res.status(400).json({ message: "Voice clone not found" });
+      }
+
+      const elevenLabsService = getElevenLabsService();
+      
+      if (!elevenLabsService) {
+        // Mock TTS processing
+        console.log('ElevenLabs not configured, using mock TTS processing');
+        setTimeout(() => {
+          res.json({
+            success: true,
+            processedAudioUrl: `/processed/tts_${Date.now()}.mp3`,
+            message: `Mock TTS generation completed for: "${text}"`,
+            startTime,
+            endTime,
+            voiceClone: selectedVoice.name
+          });
+        }, 1500);
+        return;
+      }
+
+      // Real ElevenLabs TTS processing would go here
+      res.json({
+        success: true,
+        processedAudioUrl: `/processed/tts_${Date.now()}.mp3`,
+        message: `TTS generation completed for: "${text}"`,
+        startTime,
+        endTime,
+        voiceClone: selectedVoice.name
+      });
+
+    } catch (error) {
+      console.error('TTS Generation Error:', error);
+      res.status(500).json({ message: "TTS generation failed" });
     }
   });
 

@@ -5,6 +5,8 @@ export interface IStorage {
   createProject(project: InsertProject): Promise<Project>;
   getProject(id: number): Promise<Project | undefined>;
   getAllProjects(): Promise<Project[]>;
+  updateProject(id: number, updates: Partial<Project>): Promise<Project | undefined>;
+  deleteProject(id: number): Promise<boolean>;
   
   // Audio Tracks
   createAudioTrack(track: InsertAudioTrack): Promise<AudioTrack>;
@@ -137,6 +139,28 @@ export class MemStorage implements IStorage {
 
   async getAllProjects(): Promise<Project[]> {
     return Array.from(this.projects.values());
+  }
+
+  async updateProject(id: number, updates: Partial<Project>): Promise<Project | undefined> {
+    const existingProject = this.projects.get(id);
+    if (!existingProject) return undefined;
+
+    const updatedProject = { ...existingProject, ...updates };
+    this.projects.set(id, updatedProject);
+    return updatedProject;
+  }
+
+  async deleteProject(id: number): Promise<boolean> {
+    const deleted = this.projects.delete(id);
+    if (deleted) {
+      // Also delete all tracks for this project
+      const tracksToDelete = Array.from(this.audioTracks.entries())
+        .filter(([_, track]) => track.projectId === id)
+        .map(([id, _]) => id);
+      
+      tracksToDelete.forEach(trackId => this.audioTracks.delete(trackId));
+    }
+    return deleted;
   }
 
   async createAudioTrack(insertTrack: InsertAudioTrack): Promise<AudioTrack> {

@@ -110,8 +110,8 @@ export default function SpeakerTrack({
               </Button>
               <Button
                 onClick={onSTSGenerate}
-                className="w-8 h-8 rounded bg-[var(--rian-accent)] hover:bg-blue-600 flex items-center justify-center transition-colors"
-                title="Generate STS"
+                className="w-8 h-8 rounded bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105"
+                title="Generate Speech-to-Speech"
               >
                 <Bot className="w-3 h-3" />
               </Button>
@@ -146,8 +146,29 @@ export default function SpeakerTrack({
         <div className="flex-1 p-4">
           {track.audioFile ? (
             <Waveform
+              data={track.waveformData as number[] || []}
               isActive={true}
               onContextMenu={(event) => onContextMenu(event, track.id)}
+              onSelectionSTS={(start, end) => {
+                console.log(`Generate STS for selection: ${start} - ${end}`);
+                onSTSGenerate();
+              }}
+              onTextToSpeech={(text, start, end) => {
+                console.log(`Generate TTS for "${text}" at ${start} - ${end}`);
+                // Call TTS API endpoint
+                fetch('/api/generate-tts', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    text,
+                    voiceCloneId: track.voiceClone,
+                    startTime: start,
+                    endTime: end
+                  })
+                }).then(res => res.json()).then(data => {
+                  console.log('TTS generated:', data);
+                });
+              }}
             />
           ) : (
             <div 
