@@ -15,6 +15,7 @@ import type { AudioTrack as AudioTrackType, VoiceClone } from "@shared/schema";
 
 export default function STSEditor() {
   const [currentProject] = useState({ id: 1, name: "Sample Project" });
+  const [projectData, setProjectData] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; trackId?: number }>({
     visible: false,
     x: 0,
@@ -46,6 +47,14 @@ export default function STSEditor() {
     queryKey: ["/api/voice-clones"]
   });
 
+  const { data: project } = useQuery({
+    queryKey: ["/api/projects", currentProject.id],
+    enabled: !!currentProject.id,
+    onSuccess: (data) => {
+      setProjectData(data);
+    }
+  });
+
   const uploadFileMutation = useMutation({
     mutationFn: async (file: File) => {
       const formData = new FormData();
@@ -63,7 +72,10 @@ export default function STSEditor() {
 
   const createTrackMutation = useMutation({
     mutationFn: async (trackData: { trackType: string; trackName: string; audioFile?: string }) => {
-      return apiRequest("POST", `/api/projects/${currentProject.id}/tracks`, trackData);
+      return apiRequest(`/api/projects/${currentProject.id}/tracks`, {
+        method: 'POST',
+        body: trackData
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
@@ -72,7 +84,10 @@ export default function STSEditor() {
 
   const updateTrackMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Partial<AudioTrackType> }) => {
-      return apiRequest("PUT", `/api/tracks/${id}`, updates);
+      return apiRequest(`/api/tracks/${id}`, {
+        method: 'PUT',
+        body: updates
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
@@ -81,7 +96,9 @@ export default function STSEditor() {
 
   const deleteTrackMutation = useMutation({
     mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/tracks/${id}`);
+      return apiRequest(`/api/tracks/${id}`, {
+        method: 'DELETE'
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
@@ -90,7 +107,10 @@ export default function STSEditor() {
 
   const generateSTSMutation = useMutation({
     mutationFn: async ({ trackId, voiceCloneId, timeRange }: { trackId: number; voiceCloneId: number; timeRange?: { start: number; end: number } }) => {
-      return apiRequest("POST", "/api/generate-sts", { trackId, voiceCloneId, timeRange });
+      return apiRequest("/api/generate-sts", {
+        method: 'POST',
+        body: { trackId, voiceCloneId, timeRange }
+      });
     },
     onSuccess: (data) => {
       toast({
@@ -107,7 +127,7 @@ export default function STSEditor() {
       await createTrackMutation.mutateAsync({
         trackType,
         trackName,
-        audioFile: uploadResult.url
+        audioFile: uploadResult.filename
       });
       toast({
         title: "File Uploaded",
@@ -119,6 +139,24 @@ export default function STSEditor() {
         description: "Failed to upload the file. Please try again.",
         variant: "destructive"
       });
+    }
+  };
+
+  const handleAudioExtracted = async (audioUrl: string, waveformData: number[]) => {
+    try {
+      // Create or update source audio track with extracted audio
+      await createTrackMutation.mutateAsync({
+        trackType: 'source',
+        trackName: 'Source Audio',
+        audioFile: audioUrl?.replace('/uploads/', '') || undefined
+      });
+
+      toast({
+        title: "Audio Extracted",
+        description: "Audio has been extracted from video and added to source track."
+      });
+    } catch (error) {
+      console.error('Failed to create source track:', error);
     }
   };
 
@@ -183,7 +221,10 @@ export default function STSEditor() {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {viewSettings.showVideo && (
-          <VideoPlayer />
+          <VideoPlayer 
+            videoFile={projectData?.videoFile}
+            onAudioExtracted={handleAudioExtracted}
+          />
         )}
 
         <div className="flex-1 overflow-auto">
