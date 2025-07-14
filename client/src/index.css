@@ -121,4 +121,40 @@
   .video-controls {
     background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 100%);
   }
+
+  .collapsible-section {
+    border: 1px solid var(--rian-border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+
+  .collapsible-header {
+    background: var(--rian-elevated);
+    padding: 12px 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    user-select: none;
+    transition: background-color 0.2s ease;
+  }
+
+  .collapsible-header:hover {
+    background: var(--rian-surface);
+  }
+
+  .collapsible-content {
+    background: var(--rian-surface);
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+  }
+
+  .collapsible-content.collapsed {
+    max-height: 0;
+  }
+
+  .collapsible-content.expanded {
+    max-height: 1000px;
+  }
 }

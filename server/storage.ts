@@ -33,21 +33,89 @@ export class MemStorage implements IStorage {
     this.currentAudioTrackId = 1;
     this.currentVoiceCloneId = 1;
     
-    // Initialize with some default voice clones
+    // Initialize with some default voice clones and demo project
     this.initializeVoiceClones();
+    this.initializeDemoProject();
   }
 
   private initializeVoiceClones() {
     const defaultVoices: InsertVoiceClone[] = [
-      { name: "Voice Clone A - Professional Male", description: "Deep, professional male voice", voiceType: "male" },
-      { name: "Voice Clone B - Young Female", description: "Bright, youthful female voice", voiceType: "female" },
-      { name: "Voice Clone C - Mature Male", description: "Authoritative, mature male voice", voiceType: "male" },
-      { name: "Voice Clone D - Elderly Voice", description: "Wise, elderly voice", voiceType: "elderly" },
-      { name: "Voice Clone E - Child Voice", description: "Playful, child voice", voiceType: "child" },
+      { 
+        name: "Rachel - Professional Female", 
+        description: "21m00Tcm4TlvDq8ikWAM", // ElevenLabs voice ID for Rachel
+        voiceType: "female" 
+      },
+      { 
+        name: "Drew - Confident Male", 
+        description: "29vD33N1CtxCmqQRPOHJ", // ElevenLabs voice ID for Drew
+        voiceType: "male" 
+      },
+      { 
+        name: "Clyde - Professional Male", 
+        description: "2EiwWnXFnvU5JabPnv8n", // ElevenLabs voice ID for Clyde
+        voiceType: "male" 
+      },
+      { 
+        name: "Domi - Authoritative Female", 
+        description: "AZnzlk1XvdvUeBnXmlld", // ElevenLabs voice ID for Domi
+        voiceType: "female" 
+      },
+      { 
+        name: "Dave - Warm Male", 
+        description: "CYw3kZ02Hs0563khs1Fj", // ElevenLabs voice ID for Dave
+        voiceType: "male" 
+      },
+      { 
+        name: "Fin - Mature Professional", 
+        description: "D38z5RcWu1voky8WS1ja", // ElevenLabs voice ID for Fin
+        voiceType: "male" 
+      },
     ];
 
     defaultVoices.forEach(voice => {
       this.createVoiceClone(voice);
+    });
+  }
+
+  private async initializeDemoProject() {
+    // Create a demo project
+    const demoProject = await this.createProject({
+      name: "Sample STS Project",
+      clientName: "Demo Client",
+      languagePair: "English to English",
+      videoFile: null
+    });
+
+    // Create source audio track
+    await this.createAudioTrack({
+      projectId: demoProject.id,
+      trackType: "source",
+      trackName: "Source Audio",
+      audioFile: null,
+      voiceClone: null,
+      isProcessed: false,
+      waveformData: null
+    });
+
+    // Create a couple of speaker tracks
+    await this.createAudioTrack({
+      projectId: demoProject.id,
+      trackType: "speaker",
+      trackName: "Speaker 1",
+      audioFile: null,
+      voiceClone: null,
+      isProcessed: false,
+      waveformData: null
+    });
+
+    await this.createAudioTrack({
+      projectId: demoProject.id,
+      trackType: "speaker",
+      trackName: "Speaker 2",
+      audioFile: null,
+      voiceClone: null,
+      isProcessed: false,
+      waveformData: null
     });
   }
 
@@ -57,6 +125,7 @@ export class MemStorage implements IStorage {
       ...insertProject,
       id,
       createdAt: new Date().toISOString(),
+      videoFile: insertProject.videoFile || null,
     };
     this.projects.set(id, project);
     return project;
@@ -75,6 +144,10 @@ export class MemStorage implements IStorage {
     const track: AudioTrack = {
       ...insertTrack,
       id,
+      audioFile: insertTrack.audioFile || null,
+      voiceClone: insertTrack.voiceClone || null,
+      isProcessed: insertTrack.isProcessed || false,
+      waveformData: insertTrack.waveformData || null,
     };
     this.audioTracks.set(id, track);
     return track;
@@ -106,6 +179,7 @@ export class MemStorage implements IStorage {
     const voiceClone: VoiceClone = {
       ...insertVoiceClone,
       id,
+      description: insertVoiceClone.description || null,
     };
     this.voiceClones.set(id, voiceClone);
     return voiceClone;

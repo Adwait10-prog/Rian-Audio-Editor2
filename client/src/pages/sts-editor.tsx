@@ -6,6 +6,7 @@ import VideoPlayer from "@/components/sts/video-player";
 import AudioTrack from "@/components/sts/audio-track";
 import SpeakerTrack from "@/components/sts/speaker-track";
 import METrack from "@/components/sts/me-track";
+import TrackSection from "@/components/sts/track-section";
 import ContextMenu from "@/components/sts/context-menu";
 import STSModal from "@/components/sts/sts-modal";
 import EditSpeakerModal from "@/components/sts/edit-speaker-modal";
@@ -186,61 +187,97 @@ export default function STSEditor() {
         )}
 
         <div className="flex-1 overflow-auto">
-          <div className="p-4 space-y-2">
-            {viewSettings.showAudio && sourceTrack && (
-              <AudioTrack
-                track={sourceTrack}
-                onContextMenu={handleContextMenu}
-                onPlay={() => {}}
-                onStop={() => {}}
-                onMute={() => {}}
-              />
-            )}
-
-            {viewSettings.showAudio && speakerTracks.map((track, index) => (
-              <SpeakerTrack
-                key={track.id}
-                track={track}
-                voiceClones={voiceClones}
-                onContextMenu={handleContextMenu}
-                onPlay={() => {}}
-                onStop={() => {}}
-                onMute={() => {}}
-                onSTSGenerate={() => handleSTSGeneration(track.id)}
-                onNameEdit={() => handleSpeakerNameEdit(track.id, track.trackName)}
-                onVoiceChange={(voiceCloneId) => updateTrackMutation.mutate({
-                  id: track.id,
-                  updates: { voiceClone: voiceCloneId.toString() }
-                })}
-                onFileUpload={(file) => handleFileUpload(file, 'speaker', `Speaker ${speakerTracks.length + 1}`)}
-              />
-            ))}
-
-            {/* Add Speaker Track Button */}
+          <div className="p-4 space-y-3">
+            {/* Source Audio Section */}
             {viewSettings.showAudio && (
-              <div className="rian-surface rounded-lg border rian-border p-4">
-                <button
-                  onClick={() => createTrackMutation.mutate({
-                    trackType: 'speaker',
-                    trackName: `Speaker ${speakerTracks.length + 1}`
-                  })}
-                  className="w-full border-2 border-dashed rian-border rounded-lg p-8 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
-                >
-                  <i className="fas fa-plus mb-2 text-xl"></i>
-                  <p>Add Speaker Track</p>
-                </button>
-              </div>
+              <TrackSection 
+                title="Source Audio" 
+                icon="🎤"
+                defaultExpanded={true}
+              >
+                {sourceTrack ? (
+                  <AudioTrack
+                    track={sourceTrack}
+                    onContextMenu={handleContextMenu}
+                    onPlay={() => {}}
+                    onStop={() => {}}
+                    onMute={() => {}}
+                  />
+                ) : (
+                  <div className="rian-surface rounded-lg border rian-border p-4">
+                    <button
+                      onClick={() => createTrackMutation.mutate({
+                        trackType: 'source',
+                        trackName: 'Source Audio'
+                      })}
+                      className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
+                    >
+                      <div className="text-xl mb-2">🎤</div>
+                      <p>Add Source Audio Track</p>
+                    </button>
+                  </div>
+                )}
+              </TrackSection>
             )}
 
+            {/* Speaker Tracks Section */}
+            {viewSettings.showAudio && (
+              <TrackSection 
+                title={`Speaker Tracks (${speakerTracks.length})`}
+                icon="👥"
+                defaultExpanded={true}
+              >
+                {speakerTracks.map((track, index) => (
+                  <SpeakerTrack
+                    key={track.id}
+                    track={track}
+                    voiceClones={voiceClones}
+                    onContextMenu={handleContextMenu}
+                    onPlay={() => {}}
+                    onStop={() => {}}
+                    onMute={() => {}}
+                    onSTSGenerate={() => handleSTSGeneration(track.id)}
+                    onNameEdit={() => handleSpeakerNameEdit(track.id, track.trackName)}
+                    onVoiceChange={(voiceCloneId) => updateTrackMutation.mutate({
+                      id: track.id,
+                      updates: { voiceClone: voiceCloneId.toString() }
+                    })}
+                    onFileUpload={(file) => handleFileUpload(file, 'speaker', `Speaker ${speakerTracks.length + 1}`)}
+                  />
+                ))}
+
+                {/* Add Speaker Track Button */}
+                <div className="rian-surface rounded-lg border rian-border p-4">
+                  <button
+                    onClick={() => createTrackMutation.mutate({
+                      trackType: 'speaker',
+                      trackName: `Speaker ${speakerTracks.length + 1}`
+                    })}
+                    className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
+                  >
+                    <div className="text-xl mb-2">➕</div>
+                    <p>Add Speaker Track</p>
+                  </button>
+                </div>
+              </TrackSection>
+            )}
+
+            {/* M&E Section */}
             {viewSettings.showME && (
-              <METrack
-                track={meTrack}
-                onContextMenu={handleContextMenu}
-                onPlay={() => {}}
-                onStop={() => {}}
-                onMute={() => {}}
-                onFileUpload={(file) => handleFileUpload(file, 'me', 'M&E File')}
-              />
+              <TrackSection 
+                title="M&E File" 
+                icon="🎵"
+                defaultExpanded={true}
+              >
+                <METrack
+                  track={meTrack}
+                  onContextMenu={handleContextMenu}
+                  onPlay={() => {}}
+                  onStop={() => {}}
+                  onMute={() => {}}
+                  onFileUpload={(file) => handleFileUpload(file, 'me', 'M&E File')}
+                />
+              </TrackSection>
             )}
           </div>
         </div>

@@ -131,7 +131,10 @@ export default function SpeakerTrack({
               <SelectContent className="rian-surface rian-border">
                 {voiceClones.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id.toString()}>
-                    {voice.name}
+                    <div className="flex flex-col">
+                      <span className="font-medium text-sm">{voice.name}</span>
+                      <span className="text-xs text-gray-400 capitalize">{voice.voiceType}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

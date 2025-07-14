@@ -57,11 +57,24 @@ export default function STSModal({
               <SelectContent className="rian-surface rian-border">
                 {voiceClones.map((voice) => (
                   <SelectItem key={voice.id} value={voice.id.toString()}>
-                    {voice.name}
+                    <div className="flex flex-col">
+                      <span className="font-medium">{voice.name}</span>
+                      <span className="text-xs text-gray-400 capitalize">{voice.voiceType} Voice</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="bg-[var(--rian-elevated)] rounded-lg p-3 border border-[var(--rian-border)]">
+            <div className="flex items-center space-x-2 text-sm text-gray-300 mb-2">
+              <Bot className="w-4 h-4 text-[var(--rian-accent)]" />
+              <span className="font-medium">ElevenLabs Speech-to-Speech</span>
+            </div>
+            <p className="text-xs text-gray-400">
+              This will convert your audio to the selected voice while preserving emotion, timing, and delivery.
+            </p>
           </div>
 
           <div className="flex items-center space-x-2 text-sm text-gray-400">
