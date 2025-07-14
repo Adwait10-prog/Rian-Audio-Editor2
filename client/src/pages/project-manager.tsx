@@ -33,7 +33,7 @@ export default function ProjectManager() {
     mutationFn: async (project: InsertProject) => {
       return apiRequest('/api/projects', {
         method: 'POST',
-        body: JSON.stringify(project)
+        body: project
       });
     },
     onSuccess: () => {
@@ -86,6 +86,7 @@ export default function ProjectManager() {
     formData.append('file', file);
     
     try {
+      // Upload file using apiRequest with FormData support
       const response = await apiRequest('/api/upload', {
         method: 'POST',
         body: formData
@@ -94,7 +95,7 @@ export default function ProjectManager() {
       // Update project with video file
       await apiRequest(`/api/projects/${projectId}`, {
         method: 'PUT',
-        body: JSON.stringify({ videoFile: response.filename })
+        body: { videoFile: response.filename }
       });
       
       queryClient.invalidateQueries({ queryKey: ['/api/projects'] });
@@ -103,6 +104,7 @@ export default function ProjectManager() {
         description: "Video file has been uploaded successfully."
       });
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Failed",
         description: "Failed to upload video file.",
