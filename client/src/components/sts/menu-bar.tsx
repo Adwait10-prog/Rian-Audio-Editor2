@@ -8,13 +8,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
-import { Play, Square, Save, Upload, Download, Trash2, RefreshCw, Music, Mic, Check } from "lucide-react";
+import { Play, Square, Save, Upload, Download, Trash2, RefreshCw, Music, Mic, Check, Video } from "lucide-react";
 
 interface MenuBarProps {
   onPlayAll: () => void;
   onStopAll: () => void;
   isPlaying: boolean;
   onFileUpload: (file: File, trackType: string, trackName: string) => void;
+  onVideoUpload?: (file: File) => void;
+  onNavigateToProjects?: () => void;
   viewSettings: {
     showVideo: boolean;
     showAudio: boolean;
@@ -28,6 +30,8 @@ export default function MenuBar({
   onStopAll,
   isPlaying,
   onFileUpload,
+  onVideoUpload,
+  onNavigateToProjects,
   viewSettings,
   onViewSettingsChange
 }: MenuBarProps) {
@@ -46,11 +50,27 @@ export default function MenuBar({
     input.click();
   };
 
+  const handleVideoInput = () => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'video/*';
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file && onVideoUpload) {
+        onVideoUpload(file);
+      }
+    };
+    input.click();
+  };
+
   return (
     <div className="rian-surface border-b rian-border">
       <div className="flex items-center justify-between px-4 py-2">
         <div className="flex items-center space-x-6">
-          <div className="flex items-center space-x-2">
+          <div 
+            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
+            onClick={onNavigateToProjects}
+          >
             <div className="w-6 h-6 bg-[var(--rian-accent)] rounded flex items-center justify-center">
               <div className="w-3 h-3 border-2 border-white rounded-sm"></div>
             </div>
@@ -103,6 +123,13 @@ export default function MenuBar({
                 >
                   <Mic className="w-4 h-4 mr-2" />
                   Upload Source Audio File
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  className="hover:rian-elevated cursor-pointer"
+                  onClick={handleVideoInput}
+                >
+                  <Video className="w-4 h-4 mr-2" />
+                  Upload Video File
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

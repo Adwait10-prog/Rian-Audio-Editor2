@@ -1,4 +1,5 @@
 import { useState, useRef } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import MenuBar from "@/components/sts/menu-bar";
@@ -36,6 +37,7 @@ export default function STSEditor() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
 
   const { data: tracks = [], isLoading } = useQuery({
     queryKey: ["/api/projects", currentProject.id, "tracks"],
@@ -140,6 +142,36 @@ export default function STSEditor() {
     }
   };
 
+  const handleVideoUpload = async (file: File) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      const response = await apiRequest('/api/upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      // Update current project with video file
+      await apiRequest(`/api/projects/${currentProject.id}`, {
+        method: 'PUT',
+        body: { videoFile: response.filename }
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id] });
+      toast({
+        title: "Video Uploaded",
+        description: "Video file has been uploaded successfully."
+      });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload video file.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleAudioExtracted = async (audioUrl: string, waveformData: number[]) => {
     try {
       // Create or update source audio track with extracted audio
@@ -213,6 +245,8 @@ export default function STSEditor() {
         onStopAll={handleStopAll}
         isPlaying={isPlaying}
         onFileUpload={handleFileUpload}
+        onVideoUpload={handleVideoUpload}
+        onNavigateToProjects={() => setLocation('/')}
         viewSettings={viewSettings}
         onViewSettingsChange={setViewSettings}
       />
