@@ -97,7 +97,6 @@ export default function METrack({
         <div className="flex-1 p-4">
           {track?.audioFile ? (
             <Waveform
-              audioUrl={track.audioFile ? `/uploads/${track.audioFile}` : undefined}
               isActive={true}
               onContextMenu={(event) => track && onContextMenu(event, track.id)}
             />
