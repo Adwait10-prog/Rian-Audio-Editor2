@@ -155,7 +155,7 @@ export default function SpeakerTrack({
               }}
               onTextToSpeech={(text, start, end) => {
                 console.log(`Generate TTS for "${text}" at ${start} - ${end}`);
-                // Call TTS API endpoint
+                // Call TTS API endpoint with proper error handling
                 fetch('/api/generate-tts', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
@@ -167,6 +167,8 @@ export default function SpeakerTrack({
                   })
                 }).then(res => res.json()).then(data => {
                   console.log('TTS generated:', data);
+                }).catch(error => {
+                  console.error('TTS generation failed:', error);
                 });
               }}
             />

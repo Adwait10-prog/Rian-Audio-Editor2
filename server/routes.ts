@@ -195,21 +195,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!elevenLabsService) {
         // Fallback to mock processing if ElevenLabs not configured
         console.warn('ElevenLabs not configured, using mock processing');
-        setTimeout(async () => {
-          try {
-            await storage.updateAudioTrack(trackId, { 
-              isProcessed: true,
-              voiceClone: voiceCloneId.toString()
-            });
-            res.json({ 
-              success: true, 
-              processedAudioUrl: `/processed/${trackId}_${voiceCloneId}.wav`,
-              message: "STS generation completed (mock)"
-            });
-          } catch (error) {
-            res.status(500).json({ message: "Failed to update track" });
-          }
-        }, 2000);
+        
+        // Use async timeout to avoid unhandled promise
+        const delay = () => new Promise(resolve => setTimeout(resolve, 2000));
+        await delay();
+        
+        try {
+          await storage.updateAudioTrack(trackId, { 
+            isProcessed: true,
+            voiceClone: voiceCloneId.toString()
+          });
+          res.json({ 
+            success: true, 
+            processedAudioUrl: `/processed/${trackId}_${voiceCloneId}.wav`,
+            message: "STS generation completed (mock)"
+          });
+        } catch (error) {
+          res.status(500).json({ message: "Failed to update track" });
+        }
         return;
       }
 
@@ -292,16 +295,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!elevenLabsService) {
         // Mock TTS processing
         console.log('ElevenLabs not configured, using mock TTS processing');
-        setTimeout(() => {
-          res.json({
-            success: true,
-            processedAudioUrl: `/processed/tts_${Date.now()}.mp3`,
-            message: `Mock TTS generation completed for: "${text}"`,
-            startTime,
-            endTime,
-            voiceClone: selectedVoice.name
-          });
-        }, 1500);
+        // Use async timeout to avoid unhandled promise
+        const delay = () => new Promise(resolve => setTimeout(resolve, 1500));
+        await delay();
+        
+        res.json({
+          success: true,
+          processedAudioUrl: `/processed/tts_${Date.now()}.mp3`,
+          message: `Mock TTS generation completed for: "${text}"`,
+          startTime,
+          endTime,
+          voiceClone: selectedVoice.name
+        });
         return;
       }
 
