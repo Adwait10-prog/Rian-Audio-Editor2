@@ -15,7 +15,6 @@ import type { AudioTrack as AudioTrackType, VoiceClone } from "@shared/schema";
 
 export default function STSEditor() {
   const [currentProject] = useState({ id: 1, name: "Sample Project" });
-  const [projectData, setProjectData] = useState<any>(null);
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; trackId?: number }>({
     visible: false,
     x: 0,
@@ -49,11 +48,10 @@ export default function STSEditor() {
 
   const { data: project } = useQuery({
     queryKey: ["/api/projects", currentProject.id],
-    enabled: !!currentProject.id,
-    onSuccess: (data) => {
-      setProjectData(data);
-    }
+    enabled: !!currentProject.id
   });
+
+
 
   const uploadFileMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -222,7 +220,7 @@ export default function STSEditor() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {viewSettings.showVideo && (
           <VideoPlayer 
-            videoFile={projectData?.videoFile}
+            videoFile={project?.videoFile}
             onAudioExtracted={handleAudioExtracted}
           />
         )}
