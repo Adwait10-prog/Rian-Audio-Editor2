@@ -82,6 +82,7 @@ export default function AudioTrack({
         {/* Right Waveform Area */}
         <div className="flex-1 p-4">
           <Waveform
+            audioUrl={track.audioFile ? `/uploads/${track.audioFile}` : undefined}
             isActive={!!track.audioFile}
             onContextMenu={(event) => onContextMenu(event, track.id)}
           />

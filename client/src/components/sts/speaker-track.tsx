@@ -146,6 +146,7 @@ export default function SpeakerTrack({
         <div className="flex-1 p-4">
           {track.audioFile ? (
             <Waveform
+              audioUrl={track.audioFile ? `/uploads/${track.audioFile}` : undefined}
               data={track.waveformData as number[] || []}
               isActive={true}
               onContextMenu={(event) => onContextMenu(event, track.id)}
