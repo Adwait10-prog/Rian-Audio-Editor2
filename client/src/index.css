@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(240, 4.9%, 83.9%);
+  --radius: 0.5rem;
+  
+  /* RIAN specific colors */
+  --rian-dark: hsl(0, 0%, 11.8%);
+  --rian-surface: hsl(0, 0%, 17.6%);
+  --rian-elevated: hsl(0, 0%, 22.7%);
+  --rian-border: hsl(0, 0%, 25.1%);
+  --rian-accent: hsl(207, 90%, 54%);
+  --rian-success: hsl(142, 76%, 36%);
+  --rian-warning: hsl(48, 96%, 53%);
+  --rian-danger: hsl(0, 84%, 60%);
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(240, 3.7%, 15.9%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(240, 3.7%, 15.9%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background-color: var(--rian-dark);
+    color: var(--foreground);
+  }
+}
+
+@layer components {
+  .rian-surface {
+    background-color: var(--rian-surface);
+  }
+  
+  .rian-elevated {
+    background-color: var(--rian-elevated);
+  }
+  
+  .rian-border {
+    border-color: var(--rian-border);
+  }
+  
+  .waveform-container {
+    background: repeating-linear-gradient(
+      45deg,
+      var(--rian-surface),
+      var(--rian-surface) 4px,
+      transparent 4px,
+      transparent 8px
+    );
+  }
+
+  .waveform-active {
+    background: linear-gradient(90deg, var(--rian-accent), hsl(207, 90%, 45%));
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .waveform-bars {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 8px;
+    gap: 1px;
+  }
+
+  .waveform-bar {
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 1px;
+    width: 2px;
+    transition: height 0.1s ease;
+  }
+
+  .track-row:hover {
+    background-color: rgba(59, 130, 246, 0.05);
+  }
+
+  .video-controls {
+    background: linear-gradient(180deg, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.6) 100%);
+  }
+}
