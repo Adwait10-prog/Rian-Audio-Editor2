@@ -18,6 +18,23 @@ interface SpeakerTrackProps {
   onFileUpload: (file: File) => void;
 }
 
+interface SpeakerTrackProps {
+  track: any;
+  voiceClones: any[];
+  onContextMenu: (event: React.MouseEvent, trackId: number) => void;
+  onPlay: () => void;
+  onStop: () => void;
+  onMute: () => void;
+  onSTSGenerate: () => void;
+  onNameEdit: () => void;
+  onVoiceChange: (voiceCloneId: number) => void;
+  onFileUpload: (file: File) => void;
+  zoom: number;
+  duration: number;
+  setZoom: (z: number) => void;
+  currentTime: number;
+}
+
 export default function SpeakerTrack({
   track,
   voiceClones,
@@ -28,7 +45,11 @@ export default function SpeakerTrack({
   onSTSGenerate,
   onNameEdit,
   onVoiceChange,
-  onFileUpload
+  onFileUpload,
+  zoom,
+  duration,
+  setZoom,
+  currentTime
 }: SpeakerTrackProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -61,10 +82,10 @@ export default function SpeakerTrack({
   };
 
   return (
-    <div className="rian-surface rounded-lg border rian-border track-row">
-      <div className="flex items-center">
-        {/* Left Control Panel */}
-        <div className="w-60 p-4 border-r rian-border">
+    <div className="rian-surface rounded-lg border rian-border track-row w-full relative">
+      <div className="flex items-stretch w-full">
+        {/* Fixed Left Control Panel */}
+        <div className="w-60 p-4 border-r rian-border bg-[var(--rian-surface)] flex-shrink-0 z-20 sticky left-0">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center space-x-2">
               <h3 className="font-medium text-white">{track.trackName}</h3>
@@ -142,36 +163,45 @@ export default function SpeakerTrack({
           </div>
         </div>
 
-        {/* Right Waveform Area */}
+        {/* Scrollable Right Waveform Area */}
         <div className="flex-1 p-4">
           {track.audioFile ? (
-            <Waveform
-              data={track.waveformData as number[] || []}
-              isActive={true}
-              onContextMenu={(event) => onContextMenu(event, track.id)}
-              onSelectionSTS={(start, end) => {
-                console.log(`Generate STS for selection: ${start} - ${end}`);
-                onSTSGenerate();
-              }}
-              onTextToSpeech={(text, start, end) => {
-                console.log(`Generate TTS for "${text}" at ${start} - ${end}`);
-                // Call TTS API endpoint with proper error handling
-                fetch('/api/generate-tts', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    text,
-                    voiceCloneId: track.voiceClone,
-                    startTime: start,
-                    endTime: end
-                  })
-                }).then(res => res.json()).then(data => {
-                  console.log('TTS generated:', data);
-                }).catch(error => {
-                  console.error('TTS generation failed:', error);
-                });
-              }}
-            />
+            <div
+              className="waveform-zoom-area"
+              style={{ width: `${(duration || 1) * (zoom || 100)}px`, minWidth: 300 }}
+            >
+              <Waveform
+                data={track.waveformData as number[] || []}
+                isActive={true}
+                audioUrl={track.audioFile ? (track.audioFile.startsWith('http') || track.audioFile.startsWith('/') ? track.audioFile : `/uploads/${track.audioFile}`) : undefined}
+                onContextMenu={(event) => onContextMenu(event, track.id)}
+                zoom={zoom}
+                setZoom={setZoom}
+                currentTime={currentTime}
+                onSelectionSTS={(start: number, end: number) => {
+                  console.log(`Generate STS for selection: ${start} - ${end}`);
+                  onSTSGenerate();
+                }}
+                onTextToSpeech={(text: string, start: number, end: number) => {
+                  console.log(`Generate TTS for "${text}" at ${start} - ${end}`);
+                  // Call TTS API endpoint with proper error handling
+                  fetch('/api/generate-tts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      text,
+                      voiceCloneId: track.voiceClone,
+                      startTime: start,
+                      endTime: end
+                    })
+                  }).then(res => res.json()).then(data => {
+                    console.log('TTS generated:', data);
+                  }).catch(error => {
+                    console.error('TTS generation failed:', error);
+                  });
+                }}
+              />
+            </div>
           ) : (
             <div 
               className="waveform-container border-2 border-dashed rian-border rounded-lg h-16 flex items-center justify-center cursor-pointer hover:border-[var(--rian-accent)] transition-colors"

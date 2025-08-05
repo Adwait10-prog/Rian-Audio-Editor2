@@ -216,12 +216,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const stats = fs.statSync(outputPath);
       console.log(`Extracted audio file size: ${stats.size} bytes`);
       
-      // Respond with audio file URL and path
+      // Generate waveform data using FFmpeg and PCM analysis
+      const pcmPath = outputPath.replace(/\.wav$/, '.pcm');
+      const ffmpegPcmCmd = `ffmpeg -y -i "${outputPath}" -f s16le -acodec pcm_s16le -ar 44100 -ac 1 "${pcmPath}"`;
+      console.log('Running FFmpeg PCM command:', ffmpegPcmCmd);
+      await execAsync(ffmpegPcmCmd);
+
+      // Read PCM data and calculate waveform peaks
+      const pcmBuffer = fs.readFileSync(pcmPath);
+      const sampleCount = 200; // Number of waveform bars
+      const sampleSize = 2; // 16 bits (2 bytes) per sample
+      const totalSamples = Math.floor(pcmBuffer.length / sampleSize);
+      const blockSize = Math.floor(totalSamples / sampleCount);
+      const waveformData: number[] = [];
+      for (let i = 0; i < sampleCount; i++) {
+        let sum = 0;
+        let blockStart = i * blockSize;
+        for (let j = 0; j < blockSize; j++) {
+          const idx = (blockStart + j) * sampleSize;
+          if (idx + 1 >= pcmBuffer.length) break;
+          // Little endian signed 16-bit
+          const sample = pcmBuffer.readInt16LE(idx);
+          sum += Math.abs(sample);
+        }
+        const avg = sum / blockSize;
+        waveformData.push(avg / 32768); // Normalize to 0-1
+      }
+      // Remove PCM temp file
+      fs.unlinkSync(pcmPath);
+
+      // Respond with audio file URL, path, and waveform data
       res.json({ 
         success: true,
         audioFile: outputName,
         audioUrl: `/uploads/${outputName}`,
-        fileSize: stats.size
+        fileSize: stats.size,
+        waveformData
       });
     } catch (error) {
       console.error('FFmpeg extraction failed:', error);

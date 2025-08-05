@@ -2,7 +2,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Scissors } from "lucide-react";
+import { Bot, Scissors, Play, Pause } from "lucide-react";
+import WaveSurfer from 'wavesurfer.js';
+import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 
 interface WaveformProps {
   data?: number[];
@@ -12,6 +14,9 @@ interface WaveformProps {
   onContextMenu?: (event: React.MouseEvent) => void;
   onSelectionSTS?: (startTime: number, endTime: number) => void;
   onTextToSpeech?: (text: string, startTime: number, endTime: number) => void;
+  zoom: number;
+  setZoom?: (z: number) => void;
+  currentTime?: number;
 }
 
 export default function Waveform({ 
@@ -21,8 +26,139 @@ export default function Waveform({
   height = 60,
   onContextMenu,
   onSelectionSTS,
-  onTextToSpeech
+  onTextToSpeech,
+  zoom,
+  setZoom,
+  currentTime
 }: WaveformProps) {
+  // Only declare these once
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const wavesurferRef = useRef<WaveSurfer|null>(null);
+  const waveformScrollRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [ready, setReady] = useState(false); // Only declare ONCE
+  const [duration, setDuration] = useState(1);
+
+  // Sync currentTime with WaveSurfer events (fix 'seek' type error)
+  // No-op: currentTime is now a prop, so we do not update it here.
+  useEffect(() => {
+    // Optionally, you can emit an event or call a callback if you want to notify parent of playback position.
+  }, [ready]);
+
+  // Listen for duration
+  useEffect(() => {
+    if (wavesurferRef.current) {
+      const ws = wavesurferRef.current;
+      const setWSduration = () => setDuration(ws.getDuration() || 1);
+      ws.on('ready', setWSduration);
+      return () => ws.un('ready', setWSduration);
+    }
+  }, [audioUrl, zoom]);
+
+  // Keyboard split handler (Cmd/Ctrl+B)
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'b') {
+        e.preventDefault();
+        // Perform split at currentTime for this waveform
+        if (wavesurferRef.current) {
+          // Visual feedback: add a region at playhead
+          const ws = wavesurferRef.current as any;
+          ws.addRegion && ws.addRegion({
+            start: currentTime,
+            end: currentTime + 0.01,
+            color: 'rgba(250, 204, 21, 0.7)'
+          });
+        }
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [currentTime]);
+
+
+  useEffect(() => {
+    let isMounted = true;
+    let ws: WaveSurfer | null = null;
+    
+    if (!audioUrl || !waveformRef.current) return;
+    
+    // Cleanup previous instance
+    if (wavesurferRef.current) {
+      try {
+        wavesurferRef.current.unAll && wavesurferRef.current.unAll();
+        wavesurferRef.current.destroy();
+      } catch (error) {
+        console.warn('Error destroying previous WaveSurfer instance:', error);
+      }
+      wavesurferRef.current = null;
+    }
+    
+    try {
+      ws = WaveSurfer.create({
+        container: waveformRef.current,
+        waveColor: '#60a5fa',
+        progressColor: '#2563eb',
+        height: height,
+        barWidth: 2,
+        cursorColor: '#facc15',
+        interact: true,
+        hideScrollbar: true,
+        minPxPerSec: zoom, // use px per sec for zoom
+        plugins: [
+          RegionsPlugin.create({
+            dragSelection: true,
+          })
+        ]
+      });
+      
+      wavesurferRef.current = ws;
+      
+      const handleReady = () => { 
+        if (isMounted && wavesurferRef.current) {
+          setReady(true); 
+        }
+      };
+      
+      const handleFinish = () => { 
+        if (isMounted && wavesurferRef.current) {
+          setIsPlaying(false); 
+        }
+      };
+      
+      ws.on('ready', handleReady);
+      ws.on('finish', handleFinish);
+      
+      // Load audio with error handling
+      ws.load(audioUrl).catch((error) => {
+        console.warn('Error loading audio:', error);
+      });
+      
+    } catch (error) {
+      console.warn('Error creating WaveSurfer instance:', error);
+    }
+    
+    return () => {
+      isMounted = false;
+      if (ws) {
+        try {
+          ws.unAll && ws.unAll();
+          ws.destroy();
+        } catch (error) {
+          console.warn('Error cleaning up WaveSurfer instance:', error);
+        }
+      }
+      wavesurferRef.current = null;
+    };
+  }, [audioUrl, height, zoom]);
+
+  const handlePlayPause = () => {
+    if (wavesurferRef.current) {
+      wavesurferRef.current.playPause();
+      setIsPlaying(wavesurferRef.current.isPlaying());
+    }
+  };
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
@@ -205,55 +341,61 @@ export default function Waveform({
     );
   }
 
+
+
   return (
     <>
       <div className="relative">
         <div 
-          className="waveform-active rounded-lg overflow-hidden cursor-crosshair"
-          style={{ height }}
-          onContextMenu={onContextMenu}
+          ref={waveformScrollRef}
+          className="waveform-scroll rounded-lg overflow-x-auto overflow-y-hidden"
+          style={{ height, width: '100%', position: 'relative', background: 'transparent' }}
         >
-          <canvas
-            ref={canvasRef}
-            width={600}
-            height={height}
-            className="w-full h-full"
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
+          <div
+            ref={waveformRef}
+            style={{
+              width: `${duration * zoom}px`,
+              height,
+              minWidth: '100%',
+              position: 'relative',
+              overflow: 'hidden',
+              background: 'transparent',
+            }}
+          />
+          {/* Playhead (red line) */}
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: `${((currentTime ?? 0) / (duration || 1)) * (duration * zoom)}px`,
+              width: 2,
+              height: '100%',
+              background: 'red',
+              zIndex: 10,
+              pointerEvents: 'none',
+              transition: 'left 0.03s linear',
+            }}
           />
         </div>
-        
-        {/* Selection Controls */}
-        {selectedRegion && (
-          <div className="absolute top-2 right-2 flex space-x-2">
-            <Button
-              size="sm"
-              onClick={handleSTSGenerate}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-              title="Generate STS for selection"
-            >
-              <Bot className="w-3 h-3" />
-            </Button>
-            <Button
-              size="sm"
-              onClick={handleCutWaveform}
-              className="bg-purple-600 hover:bg-purple-700 text-white shadow-lg"
-              title="Add text to selection"
-            >
-              <Scissors className="w-3 h-3" />
-            </Button>
-          </div>
-        )}
+        <div className="absolute top-2 left-2 flex space-x-2 z-10">
+          <Button
+            size="sm"
+            onClick={handlePlayPause}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+            title={isPlaying ? 'Pause' : 'Play'}
+            disabled={!ready}
+          >
+            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+          </Button>
+        </div>
       </div>
 
-      {/* Text-to-Speech Dialog */}
+      {/* Text-to-Speech Dialog (kept for future) */}
       <Dialog open={showTextDialog} onOpenChange={setShowTextDialog}>
         <DialogContent className="bg-gray-800 border-gray-700 text-white">
           <DialogHeader>
             <DialogTitle className="text-lg font-semibold">Add Text for Speech Generation</DialogTitle>
           </DialogHeader>
-          
           <div className="space-y-4 mt-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
@@ -268,7 +410,6 @@ export default function Waveform({
               />
             </div>
           </div>
-          
           <div className="flex justify-end space-x-3 mt-6">
             <Button 
               variant="outline" 

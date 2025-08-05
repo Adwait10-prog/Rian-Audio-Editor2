@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Square, VolumeX } from "lucide-react";
 import WaveSurfer from 'wavesurfer.js';
-import 'wavesurfer.js/dist/wavesurfer.css';
+import Waveform from './waveform';
+
 import type { AudioTrack as AudioTrackType } from "@shared/schema";
 
 interface AudioTrackProps {
@@ -11,6 +12,11 @@ interface AudioTrackProps {
   onPlay: () => void;
   onStop: () => void;
   onMute: () => void;
+  onFileUpload: (file: File) => void;
+  zoom: number;
+  duration: number;
+  setZoom: (z: number) => void;
+  currentTime: number;
   waveformContainerId: string;
 }
 
@@ -20,6 +26,11 @@ export default function AudioTrack({
   onPlay,
   onStop,
   onMute,
+  onFileUpload,
+  zoom,
+  duration,
+  setZoom,
+  currentTime,
   waveformContainerId
 }: AudioTrackProps) {
   const [isPlaying, setIsPlaying] = useState(false);
@@ -75,10 +86,10 @@ export default function AudioTrack({
   }, [audioUrl, waveformContainerId]);
 
   return (
-    <div className="rian-surface rounded-lg border rian-border track-row">
-      <div className="flex items-center">
-        {/* Left Control Panel */}
-        <div className="w-60 p-4 border-r rian-border">
+    <div className="rian-surface rounded-lg border rian-border track-row relative">
+      <div className="flex items-stretch">
+        {/* Fixed Left Control Panel */}
+        <div className="w-60 p-4 border-r rian-border bg-[var(--rian-surface)] flex-shrink-0 z-20 sticky left-0">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium text-white">{track.trackName} {track.audioFile ? '🎵' : '🔇'}</h3>
             <div className="flex items-center space-x-1">
@@ -117,18 +128,26 @@ export default function AudioTrack({
         </div>
 
         {/* Right Waveform Area */}
-        <div className="flex-1 p-4">
-          <div className="relative">
-            <Waveform
-              isActive={!!track.audioFile}
-              audioUrl={audioUrl}
-              onContextMenu={(event) => onContextMenu(event, track.id)}
-            />
-            {!track.audioFile && (
-              <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                No audio file
-              </div>
-            )}
+        <div className="flex-1 p-4 overflow-x-auto">
+          <div
+            className="waveform-zoom-area"
+            style={{ width: `${(duration || 1) * (zoom || 100)}px`, minWidth: 300 }}
+          >
+            <div className="relative">
+              <Waveform
+                isActive={!!track.audioFile}
+                audioUrl={audioUrl}
+                zoom={zoom}
+                setZoom={setZoom}
+                currentTime={currentTime}
+                onContextMenu={(event) => onContextMenu(event, track.id)}
+              />
+              {!track.audioFile && (
+                <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                  No audio file
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

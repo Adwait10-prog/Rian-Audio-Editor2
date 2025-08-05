@@ -6,18 +6,21 @@ interface TrackSectionProps {
   children: React.ReactNode;
   defaultExpanded?: boolean;
   icon?: React.ReactNode;
+  noExtraPadding?: boolean;
 }
 
 export default function TrackSection({ 
   title, 
   children, 
   defaultExpanded = true,
-  icon 
+  icon,
+  noExtraPadding = false
 }: TrackSectionProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   return (
     <div className="collapsible-section">
+
       <div 
         className="collapsible-header"
         onClick={() => setIsExpanded(!isExpanded)}
@@ -35,7 +38,7 @@ export default function TrackSection({
         </div>
       </div>
       <div className={`collapsible-content ${isExpanded ? 'expanded' : 'collapsed'}`}>
-        <div className="p-4 space-y-2">
+        <div className={`p-4 ${noExtraPadding ? '' : 'pb-24'} overflow-y-auto`} style={{ maxHeight: '75vh' }}>
           {children}
         </div>
       </div>

@@ -3,6 +3,8 @@ import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import MenuBar from "@/components/sts/menu-bar";
+import TimelineControls from "@/components/sts/timeline-controls";
+import TimelineRuler from "@/components/sts/timeline-ruler";
 import VideoPlayer from "@/components/sts/video-player";
 import AudioTrack from "@/components/sts/audio-track";
 import SpeakerTrack from "@/components/sts/speaker-track";
@@ -28,6 +30,8 @@ export default function STSEditor() {
     visible: false
   });
   const [isPlaying, setIsPlaying] = useState(false);
+  // Global timeline zoom state
+  const [zoomLevel, setZoomLevel] = useState(100);
   const [viewSettings, setViewSettings] = useState({
     showVideo: true,
     showAudio: true,
@@ -53,7 +57,51 @@ export default function STSEditor() {
     enabled: !!currentProject.id
   });
 
+  // Timeline scroll and duration state
+  const timelineScrollRef = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [timelineWidth, setTimelineWidth] = useState(2000); // fallback, will update below
+  const [currentTime, setCurrentTime] = useState(0);
 
+  // Compute max duration from all tracks (for ruler/grid)
+  const maxDuration = 300; // TODO: compute from audio tracks
+
+  // Handle scroll sync
+  const handleTimelineScroll = () => {
+    if (timelineScrollRef.current) setScrollLeft(timelineScrollRef.current.scrollLeft);
+  };
+
+  // Mouse wheel + Ctrl/Cmd zoom
+  const handleTimelineWheel = (e: React.WheelEvent<HTMLDivElement>) => {
+    if (!(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    const rect = timelineScrollRef.current?.getBoundingClientRect();
+    const mouseX = rect ? e.clientX - rect.left : 0;
+    const focusTime = ((mouseX + (timelineScrollRef.current?.scrollLeft || 0)) / zoomLevel) || 0;
+    const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
+    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= zoomLevel);
+    let newZoom = zoomLevel;
+    if (e.deltaY > 0 && currentIndex > 0) newZoom = ZOOM_LEVELS[currentIndex - 1];
+    else if (e.deltaY < 0 && currentIndex < ZOOM_LEVELS.length - 1) newZoom = ZOOM_LEVELS[currentIndex + 1];
+    if (newZoom !== zoomLevel) {
+      setZoomLevel(newZoom);
+      setTimeout(() => {
+        if (timelineScrollRef.current) {
+          const newMouseX = focusTime * newZoom;
+          timelineScrollRef.current.scrollLeft = Math.max(0, newMouseX - mouseX);
+        }
+      }, 0);
+    }
+  };
+
+  // Snap to major interval (from TimelineRuler)
+  const handleSnap = (snapTime: number) => {
+    setCurrentTime(snapTime);
+    // Optionally, scroll to snapped time
+    if (timelineScrollRef.current) {
+      timelineScrollRef.current.scrollLeft = Math.max(0, snapTime * zoomLevel - 100);
+    }
+  };
 
   const uploadFileMutation = useMutation({
     mutationFn: async (file: File) => {
@@ -294,6 +342,22 @@ export default function STSEditor() {
     );
   }
 
+  // --- GLOBAL TIMELINE CONTROLS ---
+  const handleZoomIn = () => {
+    const newZoom = Math.min(zoomLevel * 1.5, 100);
+    setZoomLevel(newZoom);
+    // Broadcast zoom to all waveform instances
+    document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
+  };
+  const handleZoomOut = () => {
+    const newZoom = Math.max(zoomLevel / 1.5, 1);
+    setZoomLevel(newZoom);
+    document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
+  };
+  const handleSplit = () => {
+    document.dispatchEvent(new CustomEvent('global-waveform-split'));
+  };
+
   return (
     <div className="flex flex-col h-screen bg-[var(--rian-dark)] text-white">
       <MenuBar
@@ -306,120 +370,173 @@ export default function STSEditor() {
         viewSettings={viewSettings}
         onViewSettingsChange={setViewSettings}
       />
-
+      <TimelineControls
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onSplit={handleSplit}
+        zoomLevel={zoomLevel}
+      />
       <div className="flex-1 flex flex-col overflow-hidden">
-        {viewSettings.showVideo && (
-          <VideoPlayer 
-            videoFile={project?.videoFile}
-            onAudioExtracted={handleAudioExtracted}
-          />
-        )}
-
-        <div className="flex-1 overflow-auto">
-          <div className="p-4 space-y-3">
-            {/* Source Audio Section */}
-            {viewSettings.showAudio && (
-              <TrackSection 
-                title="Source Audio" 
-                icon="🎤"
-                defaultExpanded={true}
+        <div className="flex h-full">
+          {/* Left Media Pool Sidebar */}
+          <div className="w-64 bg-[var(--rian-surface)] border-r border-[var(--rian-border)] flex flex-col">
+            <div className="p-4 border-b border-[var(--rian-border)]">
+              <h2 className="text-lg font-semibold text-white flex items-center">
+                📁 Media Pool
+              </h2>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              {/* Import Media */}
+              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-[var(--rian-accent)] transition-colors cursor-pointer">
+                <div className="text-2xl mb-2">⬆️</div>
+                <p className="text-sm text-gray-400">Import Media</p>
+              </div>
+              
+              {/* Add Audio Track */}
+              <button 
+                onClick={() => createTrackMutation.mutate({
+                  trackType: 'speaker',
+                  trackName: `Speaker ${speakerTracks.length + 1}`
+                })}
+                className="w-full bg-[var(--rian-elevated)] hover:bg-gray-600 rounded-lg p-3 text-center text-white transition-colors flex items-center justify-center space-x-2"
               >
-                {sourceTrack ? (
-                  <AudioTrack
-                    track={sourceTrack}
-                    onContextMenu={handleContextMenu}
-                    onPlay={() => {}}
-                    onStop={() => {}}
-                    onMute={() => {}}
-                    onFileUpload={(file) => handleTrackAudioUpload(file, sourceTrack)}
-                    waveformContainerId={`waveform-source-${sourceTrack.id}`}
+                <span>🔗</span>
+                <span className="text-sm">Add Audio Track</span>
+              </button>
+            </div>
+            
+            {/* Voice Profiles Section */}
+            <div className="mt-auto p-4 border-t border-[var(--rian-border)]">
+              <h3 className="text-sm font-medium text-white mb-2 flex items-center">
+                👤 Voice Profiles
+              </h3>
+              <p className="text-xs text-gray-400">No voice profiles loaded</p>
+            </div>
+          </div>
+          
+          {/* Right Main Content Area */}
+          <div className="flex-1 flex flex-col max-w-full">
+            {/* Video Player - Completely Fixed, Never Affected by Zoom */}
+            {viewSettings.showVideo && (
+              <div className="flex-shrink-0 w-full max-w-full overflow-hidden bg-[var(--rian-surface)] border-b border-[var(--rian-border)]">
+                <div className="px-4 pt-4 pb-2">
+                  <VideoPlayer 
+                    videoFile={project?.videoFile}
+                    onAudioExtracted={handleAudioExtracted}
                   />
-                ) : (
-                  <div className="rian-surface rounded-lg border rian-border p-4">
-                    <input
-                      type="file"
-                      accept="audio/*,video/*"
-                      style={{ display: 'none' }}
-                      id="source-audio-upload"
-                      onChange={handleSourceAudioUpload}
-                    />
-                    <button
-                      onClick={() => document.getElementById('source-audio-upload')?.click()}
-                      className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
-                    >
-                      <div className="text-xl mb-2">🎤</div>
-                      <p>Upload Source Audio/Video</p>
-                    </button>
-                  </div>
-                )}
-              </TrackSection>
-            )}
-
-            {/* Speaker Tracks Section */}
-            {viewSettings.showAudio && (
-              <TrackSection 
-                title={`Speaker Tracks (${speakerTracks.length})`}
-                icon="👥"
-                defaultExpanded={true}
-              >
-                {speakerTracks.map((track, index) => (
-                  <SpeakerTrack
-                    key={track.id}
-                    track={track}
-                    voiceClones={voiceClones}
-                    onContextMenu={handleContextMenu}
-                    onPlay={() => {}}
-                    onStop={() => {}}
-                    onMute={() => {}}
-                    onSTSGenerate={() => handleSTSGeneration(track.id)}
-                    onNameEdit={() => handleSpeakerNameEdit(track.id, track.trackName)}
-                    onVoiceChange={(voiceCloneId) => updateTrackMutation.mutate({
-                      id: track.id,
-                      updates: { voiceClone: voiceCloneId.toString() }
-                    })}
-                    onFileUpload={(file) => handleFileUpload(file, 'speaker', `Speaker ${speakerTracks.length + 1}`)}
-                  />
-                ))}
-
-                {/* Add Speaker Track Button */}
-                <div className="rian-surface rounded-lg border rian-border p-4">
-                  <button
-                    onClick={() => createTrackMutation.mutate({
-                      trackType: 'speaker',
-                      trackName: `Speaker ${speakerTracks.length + 1}`
-                    })}
-                    className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
-                  >
-                    <div className="text-xl mb-2">➕</div>
-                    <p>Add Speaker Track</p>
-                  </button>
                 </div>
-              </TrackSection>
+              </div>
             )}
 
-            {/* M&E Section */}
-            {viewSettings.showME && (
-              <TrackSection 
-                title="M&E File" 
-                icon="🎵"
-                defaultExpanded={true}
-              >
-                <METrack
-                  track={meTrack}
-                  onContextMenu={handleContextMenu}
-                  onPlay={() => {}}
-                  onStop={() => {}}
-                  onMute={() => {}}
-                  onFileUpload={(file) => handleFileUpload(file, 'me', 'M&E File')}
-                />
-              </TrackSection>
-            )}
+            {/* Timeline Area - Isolated Container */}
+            <div className="flex-1 overflow-hidden relative">
+              <div className="p-4 space-y-3">
+                {/* Timeline Ruler + All Waveforms */}
+                <div
+                  ref={timelineScrollRef}
+                  className="relative overflow-x-auto overflow-y-visible w-full"
+                  style={{ minHeight: 120, background: 'var(--rian-surface)' }}
+                  onScroll={handleTimelineScroll}
+                  onWheel={handleTimelineWheel}
+                >
+                  <TimelineRuler
+                    zoom={zoomLevel}
+                    duration={maxDuration}
+                    scrollLeft={scrollLeft}
+                    width={Math.max(maxDuration * zoomLevel, 2000)}
+                    currentTime={currentTime}
+                    onSnap={handleSnap}
+                  />
+                  <div style={{ width: Math.max(maxDuration * zoomLevel, 2000), minWidth: '100%' }}>
+                    {/* Source Audio Section */}
+                    {viewSettings.showAudio && sourceTrack && (
+                      <AudioTrack
+                        track={sourceTrack}
+                        onContextMenu={handleContextMenu}
+                        onPlay={() => {}}
+                        onStop={() => {}}
+                        onMute={() => {}}
+                        onFileUpload={(file) => handleTrackAudioUpload(file, sourceTrack)}
+                        waveformContainerId={`waveform-source-${sourceTrack.id}`}
+                        zoom={zoomLevel}
+                        duration={maxDuration}
+                        setZoom={setZoomLevel}
+                        currentTime={currentTime}
+                      />
+                    )}
+                    {/* Speaker Tracks Section */}
+                    {viewSettings.showAudio && (
+                      <TrackSection 
+                        title="Speaker Tracks" 
+                        icon="🗣️"
+                        defaultExpanded={true}
+                      >
+                        {speakerTracks.map((track: any, index: any) => (
+                          <SpeakerTrack
+                            key={track.id}
+                            track={track}
+                            voiceClones={voiceClones}
+                            onContextMenu={handleContextMenu}
+                            onPlay={() => {}}
+                            onStop={() => {}}
+                            onMute={() => {}}
+                            onSTSGenerate={() => handleSTSGeneration(track.id)}
+                            onNameEdit={() => handleSpeakerNameEdit(track.id, track.trackName)}
+                            onVoiceChange={(voiceCloneId) => updateTrackMutation.mutate({
+                              id: track.id,
+                              updates: { voiceClone: voiceCloneId.toString() }
+                            })}
+                            onFileUpload={(file) => handleTrackAudioUpload(file, track)}
+                            zoom={zoomLevel}
+                            duration={maxDuration}
+                            setZoom={setZoomLevel}
+                            currentTime={currentTime}
+                          />
+                        ))}
+                        <div className="rian-surface rounded-lg border rian-border p-4">
+                          <button
+                            onClick={() => createTrackMutation.mutate({
+                              trackType: 'speaker',
+                              trackName: `Speaker ${speakerTracks.length + 1}`
+                            })}
+                            className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
+                          >
+                            <div className="text-xl mb-2">➕</div>
+                            <p>Add Speaker Track</p>
+                          </button>
+                        </div>
+                      </TrackSection>
+                    )}
+
+                    {/* M&E Section */}
+                    {viewSettings.showME && (
+                      <TrackSection 
+                        title="M&E File" 
+                        icon="🎵"
+                        defaultExpanded={true}
+                        noExtraPadding={true}
+                      >
+                        <METrack
+                          track={meTrack}
+                          onContextMenu={handleContextMenu}
+                          onPlay={() => {}}
+                          onStop={() => {}}
+                          onMute={() => {}}
+                          onFileUpload={(file) => handleFileUpload(file, 'me', 'M&E File')}
+                        />
+                      </TrackSection>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+// ... (rest of the code remains the same)
 
       <ContextMenu
-        visible={contextMenu.visible}
+        // ... (rest of the code remains the same)
         x={contextMenu.x}
         y={contextMenu.y}
         onClose={() => setContextMenu({ visible: false, x: 0, y: 0 })}
@@ -473,6 +590,7 @@ export default function STSEditor() {
           setEditSpeakerModal({ visible: false });
         }}
       />
+      </div>
 
       <input
         ref={fileInputRef}
