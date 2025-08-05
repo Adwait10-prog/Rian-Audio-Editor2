@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STS Audio Editor - Professional Speech-to-Speech Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'editor-bg': '#1a1a1a',
+                        'panel-bg': '#2d2d2d',
+                        'track-bg': '#363636',
+                        'waveform': '#4f46e5',
+                        'waveform-muted': '#6b7280'
+                    },
+                    fontFamily: {
+                        'mono': ['Courier New', 'monospace']
+                    }
+                }
+            }
+        };
+    </script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .waveform-canvas {
+            background: linear-gradient(90deg, #363636 0%, #404040 100%);
+        }
+        
+        .track-waveform {
+            background: repeating-linear-gradient(
+                90deg,
+                #4f46e5 0px,
+                #4f46e5 2px,
+                transparent 2px,
+                transparent 4px
+            );
+            height: 60px;
+            opacity: 0.8;
+        }
+        
+        .timeline-ruler {
+            background: linear-gradient(to right, #6b7280 0%, #6b7280 1px, transparent 1px, transparent 100%);
+            background-size: 50px 100%;
+        }
+
+        .context-menu {
+            display: none;
+            position: absolute;
+            z-index: 1000;
+            background: #2d2d2d;
+            border: 1px solid #404040;
+            border-radius: 6px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+        }
+
+        .playhead {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #ef4444;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .time-selection {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            background: rgba(79, 70, 229, 0.3);
+            border: 1px solid #4f46e5;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body class="bg-editor-bg text-gray-100 font-sans">
+    <!-- Header Navigation -->
+    <header class="bg-panel-bg border-b border-gray-700 px-6 py-3">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-6">
+                <h1 class="text-xl font-bold text-white">STS Audio Editor</h1>
+                <nav class="flex space-x-4">
+                    <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-file mr-2"></i>File
+                    </button>
+                    <button class="px-3 py-1 text-sm text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-eye mr-2"></i>View
+                    </button>
+                    <button class="px-3 py-1 text-sm text-gray-300 hover:text-white transition-colors">
+                        <i class="fas fa-tools mr-2"></i>Tools
+                    </button>
+                </nav>
+            </div>
+            <div class="flex items-center space-x-4">
+                <span class="text-sm text-gray-400" data-bind="project.name">Project: Dubbing_Commercial_EN-ES</span>
+                <button class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors">
+                    <i class="fas fa-save mr-2"></i>Auto Save: ON
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="flex h-screen">
+        <!-- Left Sidebar - File Management -->
+        <aside class="w-80 bg-panel-bg border-r border-gray-700 flex flex-col">
+            <div class="p-4 border-b border-gray-700">
+                <h2 class="text-lg font-semibold mb-4">Project Files</h2>
+                
+                <!-- Upload Buttons -->
+                <div class="space-y-2 mb-6">
+                    <button onclick="openUploadModal('audio')" class="w-full px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                        <i class="fas fa-upload mr-2"></i>Upload Audio Files
+                    </button>
+                    <button onclick="openUploadModal('me')" class="w-full px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                        <i class="fas fa-music mr-2"></i>Upload M&E File
+                    </button>
+                    <button onclick="openUploadModal('source')" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                        <i class="fas fa-microphone mr-2"></i>Upload Source Audio
+                    </button>
+                </div>
+
+                <!-- File List -->
+                <div class="space-y-2">
+                    <div class="text-sm font-medium text-gray-300 mb-2">Audio Tracks (3)</div>
+                    <div class="space-y-1">
+                        <div class="flex items-center justify-between p-2 bg-track-bg rounded text-sm">
+                            <span>Speaker_1_dialogue.wav</span>
+                            <span class="text-gray-400">2.3MB</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-track-bg rounded text-sm">
+                            <span>Speaker_2_dialogue.wav</span>
+                            <span class="text-gray-400">1.8MB</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-track-bg rounded text-sm">
+                            <span>Narrator_voice.wav</span>
+                            <span class="text-gray-400">3.1MB</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STS Voice Selection -->
+            <div class="p-4 border-b border-gray-700">
+                <h3 class="text-md font-semibold mb-3">STS Voice Selection</h3>
+                <select class="w-full p-2 bg-track-bg border border-gray-600 rounded text-white">
+                    <option>Maria - Spanish Female</option>
+                    <option>Carlos - Spanish Male</option>
+                    <option>Sofia - Spanish Female (Young)</option>
+                    <option>Diego - Spanish Male (Deep)</option>
+                </select>
+                <button onclick="generateSTS()" class="w-full mt-2 px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors">
+                    <i class="fas fa-magic mr-2"></i>Generate STS
+                </button>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="p-4 flex-1">
+                <h3 class="text-md font-semibold mb-3">Quick Actions</h3>
+                <div class="space-y-2">
+                    <button class="w-full px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-download mr-2"></i>Download All Files
+                    </button>
+                    <button class="w-full px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors">
+                        <i class="fas fa-trash mr-2"></i>Delete All Audio
+                    </button>
+                    <button class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                        <i class="fas fa-refresh mr-2"></i>Refresh Project
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Editor Area -->
+        <main class="flex-1 flex flex-col">
+            <!-- Video Player Section -->
+            <section class="bg-panel-bg border-b border-gray-700 p-4">
+                <div class="max-w-4xl mx-auto">
+                    <!-- Commercial video showcasing a Spanish product advertisement -->
+                    <video 
+                        id="mainVideo" 
+                        class="w-full h-64 bg-black rounded-lg" 
+                        controls 
+                        data-mock="true"
+                        poster="https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=400"
+                    >
+                        <source src="#" type="video/mp4" data-implementation="Replace with actual video file">
+                        Your browser does not support the video tag.
+                    </video>
+                    
+                    <!-- Transport Controls -->
+                    <div class="flex items-center justify-center space-x-4 mt-4">
+                        <button onclick="playAll()" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                            <i class="fas fa-play mr-2"></i>Play All
+                        </button>
+                        <button onclick="stopAll()" class="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
+                            <i class="fas fa-stop mr-2"></i>Stop All
+                        </button>
+                        <div class="flex items-center space-x-2 text-sm">
+                            <span class="text-gray-400">Time:</span>
+                            <span class="font-mono text-white" id="currentTime">00:00:00</span>
+                            <span class="text-gray-400">/</span>
+                            <span class="font-mono text-gray-400" id="totalTime">00:02:45</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Timeline and Multi-track Editor -->
+            <section class="flex-1 flex flex-col">
+                <!-- Timeline Header -->
+                <div class="bg-track-bg border-b border-gray-600 p-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold">Multi-track Timeline</h3>
+                        <div class="flex items-center space-x-4">
+                            <button class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
+                                <i class="fas fa-search-plus mr-1"></i>Zoom In
+                            </button>
+                            <button class="px-3 py-1 text-sm bg-gray-600 text-white rounded hover:bg-gray-700">
+                                <i class="fas fa-search-minus mr-1"></i>Zoom Out
+                            </button>
+                            <span class="text-sm text-gray-400">Scale: 1:1</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Ruler -->
+                <div class="timeline-ruler h-8 border-b border-gray-600 relative">
+                    <div class="absolute inset-0 flex items-center text-xs text-gray-400 font-mono">
+                        <div class="absolute left-0">0:00</div>
+                        <div class="absolute left-20">0:30</div>
+                        <div class="absolute left-40">1:00</div>
+                        <div class="absolute left-60">1:30</div>
+                        <div class="absolute left-80">2:00</div>
+                        <div class="absolute left-96">2:30</div>
+                    </div>
+                    <!-- Playhead -->
+                    <div class="playhead" id="playhead" style="left: 120px;"></div>
+                    <!-- Time Selection -->
+                    <div class="time-selection" id="timeSelection" style="left: 80px; width: 100px; display: none;"></div>
+                </div>
+
+                <!-- Audio Tracks -->
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Source Audio Track -->
+                    <div class="border-b border-gray-600">
+                        <div class="flex">
+                            <!-- Track Header -->
+                            <div class="w-64 bg-panel-bg p-4 border-r border-gray-600">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-semibold text-white">Source Audio</h4>
+                                    <div class="flex space-x-1">
+                                        <button class="w-8 h-8 bg-emerald-600 rounded text-white hover:bg-emerald-700 transition-colors">
+                                            <i class="fas fa-play text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-red-600 rounded text-white hover:bg-red-700 transition-colors">
+                                            <i class="fas fa-stop text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-gray-600 rounded text-white hover:bg-gray-700 transition-colors">
+                                            <i class="fas fa-volume-mute text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="text-xs text-gray-400">
+                                    <div>Format: WAV</div>
+                                    <div>Duration: 2:45</div>
+                                    <div>Size: 15.2MB</div>
+                                </div>
+                            </div>
+                            <!-- Waveform Area -->
+                            <div class="flex-1 relative h-20 waveform-canvas cursor-pointer" 
+                                 oncontextmenu="showContextMenu(event, 'source')" 
+                                 onclick="selectTimeRange(event)">
+                                <div class="track-waveform absolute inset-0" style="width: 70%;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speaker 1 Track -->
+                    <!-- @COMPONENT: AudioTrack [speaker1] -->
+                    <div class="border-b border-gray-600">
+                        <div class="flex">
+                            <div class="w-64 bg-panel-bg p-4 border-r border-gray-600">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-semibold text-white" contenteditable="true" onclick="editSpeakerName(this)">Speaker 1</h4>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex space-x-1">
+                                        <button class="w-8 h-8 bg-emerald-600 rounded text-white hover:bg-emerald-700 transition-colors">
+                                            <i class="fas fa-play text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-red-600 rounded text-white hover:bg-red-700 transition-colors">
+                                            <i class="fas fa-stop text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-yellow-600 rounded text-white hover:bg-yellow-700 transition-colors" title="Solo">
+                                            <i class="fas fa-headphones text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-gray-600 rounded text-white hover:bg-gray-700 transition-colors">
+                                            <i class="fas fa-volume-mute text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <button onclick="generateSTSForSpeaker('speaker1')" class="w-full px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                        <i class="fas fa-magic mr-1"></i>Generate STS
+                                    </button>
+                                    <div class="text-xs text-gray-400">
+                                        <div>Status: <span class="text-emerald-400">STS Applied</span></div>
+                                        <div>Voice: Maria - Spanish</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 relative h-20 waveform-canvas cursor-pointer" 
+                                 oncontextmenu="showContextMenu(event, 'speaker1')"
+                                 onclick="selectTimeRange(event)">
+                                <div class="track-waveform absolute inset-0" style="width: 45%; background-color: #10b981;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- @END_COMPONENT: AudioTrack -->
+
+                    <!-- Speaker 2 Track -->
+                    <div class="border-b border-gray-600">
+                        <div class="flex">
+                            <div class="w-64 bg-panel-bg p-4 border-r border-gray-600">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-semibold text-white" contenteditable="true">Speaker 2</h4>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex space-x-1">
+                                        <button class="w-8 h-8 bg-emerald-600 rounded text-white hover:bg-emerald-700 transition-colors">
+                                            <i class="fas fa-play text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-red-600 rounded text-white hover:bg-red-700 transition-colors">
+                                            <i class="fas fa-stop text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-yellow-600 rounded text-white hover:bg-yellow-700 transition-colors">
+                                            <i class="fas fa-headphones text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-gray-600 rounded text-white hover:bg-gray-700 transition-colors">
+                                            <i class="fas fa-volume-mute text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <button onclick="generateSTSForSpeaker('speaker2')" class="w-full px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                        <i class="fas fa-magic mr-1"></i>Generate STS
+                                    </button>
+                                    <div class="text-xs text-gray-400">
+                                        <div>Status: <span class="text-yellow-400">Processing...</span></div>
+                                        <div>Voice: Carlos - Spanish</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 relative h-20 waveform-canvas cursor-pointer" 
+                                 oncontextmenu="showContextMenu(event, 'speaker2')"
+                                 onclick="selectTimeRange(event)">
+                                <div class="track-waveform absolute inset-0" style="width: 60%; background-color: #f59e0b;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Narrator Track -->
+                    <div class="border-b border-gray-600">
+                        <div class="flex">
+                            <div class="w-64 bg-panel-bg p-4 border-r border-gray-600">
+                                <div class="flex items-center justify-between mb-2">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="font-semibold text-white" contenteditable="true">Narrator</h4>
+                                        <button class="text-gray-400 hover:text-white">
+                                            <i class="fas fa-edit text-xs"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex space-x-1">
+                                        <button class="w-8 h-8 bg-emerald-600 rounded text-white hover:bg-emerald-700 transition-colors">
+                                            <i class="fas fa-play text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-red-600 rounded text-white hover:bg-red-700 transition-colors">
+                                            <i class="fas fa-stop text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-yellow-600 rounded text-white hover:bg-yellow-700 transition-colors">
+                                            <i class="fas fa-headphones text-xs"></i>
+                                        </button>
+                                        <button class="w-8 h-8 bg-gray-600 rounded text-white hover:bg-gray-700 transition-colors">
+                                            <i class="fas fa-volume-mute text-xs"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="space-y-1">
+                                    <button onclick="generateSTSForSpeaker('narrator')" class="w-full px-2 py-1 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                        <i class="fas fa-magic mr-1"></i>Generate STS
+                                    </button>
+                                    <div class="text-xs text-gray-400">
+                                        <div>Status: <span class="text-gray-400">Ready for STS</span></div>
+                                        <div>Voice: Sofia - Spanish</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 relative h-20 waveform-canvas cursor-pointer" 
+                                 oncontextmenu="showContextMenu(event, 'narrator')"
+                                 onclick="selectTimeRange(event)">
+                                <div class="track-waveform absolute inset-0" style="width: 35%; background-color: #8b5cf6;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Bottom Export Panel -->
+            <section class="bg-panel-bg border-t border-gray-700 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm">
+                            <span class="text-gray-400">Project Status:</span>
+                            <span class="text-emerald-400 font-semibold">Ready for Export</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="text-gray-400">Total Duration:</span>
+                            <span class="text-white font-mono">02:45:12</span>
+                        </div>
+                    </div>
+                    <div class="flex space-x-3">
+                        <button onclick="previewProject()" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                            <i class="fas fa-eye mr-2"></i>Preview Final
+                        </button>
+                        <button onclick="exportProject()" class="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors">
+                            <i class="fas fa-download mr-2"></i>Export Project
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="contextMenu" class="context-menu">
+        <div class="py-2">
+            <button onclick="generateSTSForSelection()" class="w-full px-4 py-2 text-left text-sm text-white hover:bg-gray-600 transition-colors">
+                <i class="fas fa-magic mr-2"></i>Generate STS for Selection
+            </button>
+            <button onclick="downloadIndividualAudio()" class="w-full px-4 py-2 text-left text-sm text-white hover:bg-gray-600 transition-colors">
+                <i class="fas fa-download mr-2"></i>Download Individual Audio
+            </button>
+            <hr class="my-1 border-gray-600">
+            <button onclick="deleteAudioFile()" class="w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-gray-600 transition-colors">
+                <i class="fas fa-trash mr-2"></i>Delete Audio File
+            </button>
+        </div>
+    </div>
+
+    <!-- Upload Modal -->
+    <div id="uploadModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-panel-bg rounded-lg p-6 w-96">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white" id="uploadModalTitle">Upload Audio Files</h3>
+                <button onclick="closeUploadModal()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center mb-4">
+                <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                <p class="text-gray-300 mb-2">Drag and drop files here or click to browse</p>
+                <p class="text-sm text-gray-500">Supported formats: WAV, MP3, M4A (Max 50MB)</p>
+                <input type="file" multiple accept=".wav,.mp3,.m4a" class="hidden" id="fileInput">
+                <button onclick="document.getElementById('fileInput').click()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                    Choose Files
+                </button>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeUploadModal()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="uploadFiles()" class="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors">
+                    <i class="fas fa-upload mr-2"></i>Upload
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- STS Processing Modal -->
+    <div id="stsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-panel-bg rounded-lg p-6 w-96">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-white">Generate Speech-to-Speech</h3>
+                <button onclick="closeStsModal()" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Select Voice</label>
+                <select id="voiceSelect" class="w-full p-3 bg-track-bg border border-gray-600 rounded text-white">
+                    <option value="maria">Maria - Spanish Female (Natural)</option>
+                    <option value="carlos">Carlos - Spanish Male (Authoritative)</option>
+                    <option value="sofia">Sofia - Spanish Female (Young, Energetic)</option>
+                    <option value="diego">Diego - Spanish Male (Deep, Mature)</option>
+                    <option value="isabel">Isabel - Spanish Female (Professional)</option>
+                </select>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-2">Processing Options</label>
+                <div class="space-y-2">
+                    <label class="flex items-center">
+                        <input type="checkbox" checked class="mr-2">
+                        <span class="text-sm text-gray-300">Preserve original timing</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" checked class="mr-2">
+                        <span class="text-sm text-gray-300">Apply noise reduction</span>
+                    </label>
+                    <label class="flex items-center">
+                        <input type="checkbox" class="mr-2">
+                        <span class="text-sm text-gray-300">Enhanced lip-sync accuracy</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeStsModal()" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors">
+                    Cancel
+                </button>
+                <button onclick="processSTS()" class="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors">
+                    <i class="fas fa-magic mr-2"></i>Generate STS
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div id="progressModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50 flex items-center justify-center">
+        <div class="bg-panel-bg rounded-lg p-6 w-96">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+                <h3 class="text-lg font-semibold text-white mb-2" id="progressTitle">Processing STS...</h3>
+                <p class="text-gray-400 mb-4" id="progressText">This may take a few moments</p>
+                <div class="w-full bg-gray-700 rounded-full h-2">
+                    <div class="bg-indigo-600 h-2 rounded-full transition-all duration-500" id="progressBar" style="width: 0%"></div>
+                </div>
+                <p class="text-sm text-gray-500 mt-2" id="progressPercent">0%</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TODO: Implement business logic, API calls, and state management
+        
+        let currentUploadType = '';
+        let selectedTrack = '';
+
+        (() => {
+            // Initialize application
+            function initializeApp() {
+                // Set up event listeners
+                document.addEventListener('click', hideContextMenu);
+                
+                // Simulate timeline updates
+                setInterval(updateTimeline, 100);
+                
+                console.log('STS Audio Editor initialized');
+            }
+
+            // File upload functions
+            window.openUploadModal = function(type) {
+                currentUploadType = type;
+                const modal = document.getElementById('uploadModal');
+                const title = document.getElementById('uploadModalTitle');
+                
+                const titles = {
+                    'audio': 'Upload Audio Files',
+                    'me': 'Upload M&E File',
+                    'source': 'Upload Source Audio File'
+                };
+                
+                title.textContent = titles[type];
+                modal.classList.remove('hidden');
+            };
+
+            window.closeUploadModal = function() {
+                document.getElementById('uploadModal').classList.add('hidden');
+            };
+
+            window.uploadFiles = function() {
+                showProgress('Uploading files...', 'Please wait while files are processed');
+                
+                // Simulate upload progress
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 20;
+                    updateProgress(Math.min(progress, 100));
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            hideProgress();
+                            closeUploadModal();
+                            showNotification('Files uploaded successfully!', 'success');
+                        }, 500);
+                    }
+                }, 300);
+            };
+
+            // STS Generation functions
+            window.generateSTS = function() {
+                openStsModal();
+            };
+
+            window.generateSTSForSpeaker = function(speaker) {
+                selectedTrack = speaker;
+                openStsModal();
+            };
+
+            function openStsModal() {
+                document.getElementById('stsModal').classList.remove('hidden');
+            }
+
+            window.closeStsModal = function() {
+                document.getElementById('stsModal').classList.add('hidden');
+            };
+
+            window.processSTS = function() {
+                closeStsModal();
+                showProgress('Generating STS...', 'Processing audio with selected voice');
+                
+                // Simulate STS processing
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 15;
+                    updateProgress(Math.min(progress, 100));
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            hideProgress();
+                            showNotification('STS generation completed!', 'success');
+                        }, 500);
+                    }
+                }, 500);
+            };
+
+            // Context menu functions
+            window.showContextMenu = function(event, trackType) {
+                event.preventDefault();
+                const menu = document.getElementById('contextMenu');
+                menu.style.display = 'block';
+                menu.style.left = event.pageX + 'px';
+                menu.style.top = event.pageY + 'px';
+                selectedTrack = trackType;
+            };
+
+            function hideContextMenu() {
+                document.getElementById('contextMenu').style.display = 'none';
+            }
+
+            window.generateSTSForSelection = function() {
+                hideContextMenu();
+                openStsModal();
+            };
+
+            window.downloadIndividualAudio = function() {
+                hideContextMenu();
+                showNotification('Download started for ' + selectedTrack, 'info');
+            };
+
+            window.deleteAudioFile = function() {
+                hideContextMenu();
+                if (confirm('Are you sure you want to delete this audio file?')) {
+                    showNotification('Audio file deleted', 'warning');
+                }
+            };
+
+            // Timeline functions
+            window.selectTimeRange = function(event) {
+                const selection = document.getElementById('timeSelection');
+                const rect = event.currentTarget.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                
+                selection.style.left = x + 'px';
+                selection.style.width = '100px';
+                selection.style.display = 'block';
+            };
+
+            function updateTimeline() {
+                const playhead = document.getElementById('playhead');
+                const currentPos = parseInt(playhead.style.left.replace('px', '')) || 120;
+                
+                // Simulate playhead movement
+                if (currentPos < 400) {
+                    // playhead.style.left = (currentPos + 0.5) + 'px';
+                }
+                
+                // Update time display
+                const timeElement = document.getElementById('currentTime');
+                const minutes = Math.floor((currentPos - 120) / 10);
+                const seconds = Math.floor(((currentPos - 120) / 10 % 1) * 60);
+                timeElement.textContent = `00:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            }
+
+            // Transport controls
+            window.playAll = function() {
+                showNotification('Playing all tracks', 'info');
+            };
+
+            window.stopAll = function() {
+                showNotification('Stopped all tracks', 'info');
+            };
+
+            // Project functions
+            window.previewProject = function() {
+                showProgress('Generating preview...', 'Creating final video preview');
+                
+                setTimeout(() => {
+                    hideProgress();
+                    showNotification('Preview ready! Opening in new tab...', 'success');
+                }, 2000);
+            };
+
+            window.exportProject = function() {
+                showProgress('Exporting project...', 'Compiling final video with all audio tracks');
+                
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += Math.random() * 10;
+                    updateProgress(Math.min(progress, 100));
+                    
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        setTimeout(() => {
+                            hideProgress();
+                            showNotification('Project exported successfully! Download started.', 'success');
+                        }, 500);
+                    }
+                }, 400);
+            };
+
+            // Utility functions
+            function showProgress(title, text) {
+                const modal = document.getElementById('progressModal');
+                document.getElementById('progressTitle').textContent = title;
+                document.getElementById('progressText').textContent = text;
+                document.getElementById('progressBar').style.width = '0%';
+                document.getElementById('progressPercent').textContent = '0%';
+                modal.classList.remove('hidden');
+            }
+
+            function updateProgress(percent) {
+                document.getElementById('progressBar').style.width = percent + '%';
+                document.getElementById('progressPercent').textContent = Math.round(percent) + '%';
+            }
+
+            function hideProgress() {
+                document.getElementById('progressModal').classList.add('hidden');
+            }
+
+            function showNotification(message, type) {
+                // Create temporary notification
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg text-white ${
+                    type === 'success' ? 'bg-emerald-600' : 
+                    type === 'warning' ? 'bg-amber-600' : 
+                    type === 'error' ? 'bg-red-600' : 'bg-blue-600'
+                }`;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+
+            window.editSpeakerName = function(element) {
+                element.focus();
+                element.addEventListener('blur', () => {
+                    showNotification('Speaker name updated', 'success');
+                });
+            };
+
+            // Initialize when DOM is ready
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeApp);
+            } else {
+                initializeApp();
+            }
+        })();
+    </script>
+</body>
+</html>

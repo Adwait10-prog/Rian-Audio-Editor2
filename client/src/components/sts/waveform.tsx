@@ -7,6 +7,7 @@ import { Bot, Scissors } from "lucide-react";
 interface WaveformProps {
   data?: number[];
   isActive?: boolean;
+  audioUrl?: string;
   height?: number;
   onContextMenu?: (event: React.MouseEvent) => void;
   onSelectionSTS?: (startTime: number, endTime: number) => void;
@@ -16,6 +17,7 @@ interface WaveformProps {
 export default function Waveform({ 
   data = [], 
   isActive = false, 
+  audioUrl,
   height = 60,
   onContextMenu,
   onSelectionSTS,
@@ -37,7 +39,34 @@ export default function Waveform({
     });
   };
 
-  const waveformData = data.length > 0 ? data : generateSampleData();
+  const [waveformData, setWaveformData] = useState<number[]>(data.length > 0 ? data : generateSampleData());
+
+  // Load and decode audio to generate waveform
+  useEffect(() => {
+    if (!audioUrl) return;
+    const fetchAndDecode = async () => {
+      try {
+        const response = await fetch(audioUrl);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        const rawData = audioBuffer.getChannelData(0);
+        const samples = 200;
+        const blockSize = Math.floor(rawData.length / samples);
+        const filteredData = Array(samples).fill(0).map((_, i) => {
+          let sum = 0;
+          for (let j = 0; j < blockSize; j++) {
+            sum += Math.abs(rawData[(i * blockSize) + j]);
+          }
+          return sum / blockSize;
+        });
+        setWaveformData(filteredData);
+      } catch (err) {
+        setWaveformData(generateSampleData());
+      }
+    };
+    fetchAndDecode();
+  }, [audioUrl]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!isActive) return;

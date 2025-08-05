@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RIAN STS Editor - Speech-to-Speech Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/wavesurfer.js@7"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'rian-dark': '#1a1a1a',
+            'rian-secondary': '#2a2a2a',
+            'rian-panel': '#333333',
+            'rian-border': '#404040',
+            'rian-accent': '#007acc',
+            'rian-text': '#ffffff',
+            'rian-text-secondary': '#cccccc'
+          },
+          fontFamily: {
+            'inter': ['Inter', 'sans-serif']
+          }
+        }
+      }
+    };
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .waveform-container { height: 60px; }
+        .track-lane { border-bottom: 1px solid #404040; }
+        .timeline-marker { position: absolute; top: 0; bottom: 0; width: 2px; background: #007acc; z-index: 10; }
+        .video-controls { background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); }
+        .hover-highlight:hover { background-color: rgba(255,255,255,0.05); }
+        .context-menu { position: absolute; z-index: 1000; background: #2a2a2a; border: 1px solid #404040; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-rian-dark text-rian-text font-inter overflow-hidden">
+    <!-- @COMPONENT: MainLayout -->
+    
+    <!-- Top Menu Bar -->
+    <div class="bg-rian-secondary border-b border-rian-border px-4 py-2 flex items-center justify-between">
+        <div class="flex items-center space-x-6">
+            <!-- @COMPONENT: Logo -->
+            <div class="flex items-center space-x-2">
+                <div class="w-8 h-8 bg-gradient-to-r from-green-400 to-blue-500 rounded"></div>
+                <span class="font-bold text-lg">RIAN</span>
+                <span class="text-xs bg-rian-panel px-2 py-1 rounded">STS Editor</span>
+            </div>
+            
+            <!-- @COMPONENT: TopMenuBar -->
+            <nav class="flex items-center space-x-1">
+                <div class="relative group">
+                    <button class="px-3 py-1 hover:bg-rian-panel rounded text-sm">File</button>
+                    <!-- Dropdown would be implemented in React -->
+                </div>
+                <div class="relative group">
+                    <button class="px-3 py-1 hover:bg-rian-panel rounded text-sm">View</button>
+                </div>
+                <div class="relative group">
+                    <button class="px-3 py-1 hover:bg-rian-panel rounded text-sm">Tools</button>
+                </div>
+                <div class="relative group">
+                    <button class="px-3 py-1 hover:bg-rian-panel rounded text-sm">VO</button>
+                </div>
+            </nav>
+        </div>
+        
+        <!-- @COMPONENT: ProjectInfo -->
+        <div class="flex items-center space-x-4 text-sm text-rian-text-secondary">
+            <span>Project: <span class="text-rian-text" data-bind="project.name">Voice Over Marathi To English</span></span>
+            <span>•</span>
+            <span data-bind="project.status">In Progress</span>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex h-screen pt-0">
+        <!-- @COMPONENT: Sidebar -->
+        <div class="w-80 bg-rian-secondary border-r border-rian-border flex flex-col">
+            <!-- Sidebar Header -->
+            <div class="p-4 border-b border-rian-border">
+                <div class="flex items-center justify-between">
+                    <h3 class="font-semibold">Project Files</h3>
+                    <button class="text-rian-text-secondary hover:text-rian-text">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- File Tree -->
+            <div class="flex-1 overflow-y-auto p-2">
+                <!-- @COMPONENT: FileTree -->
+                <div class="space-y-1">
+                    <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                        <i class="fas fa-folder text-yellow-500"></i>
+                        <span class="text-sm">Source Files</span>
+                    </div>
+                    <div class="ml-6 space-y-1">
+                        <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer bg-rian-accent bg-opacity-20">
+                            <i class="fas fa-video text-blue-400"></i>
+                            <span class="text-sm" data-bind="video.filename">sample_video.mp4</span>
+                        </div>
+                        <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                            <i class="fas fa-file-audio text-green-400"></i>
+                            <span class="text-sm">source_audio.wav</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                        <i class="fas fa-folder text-yellow-500"></i>
+                        <span class="text-sm">Speaker Tracks</span>
+                    </div>
+                    <div class="ml-6 space-y-1">
+                        <!-- @MAP: speakers.map(speaker => ( -->
+                        <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                            <i class="fas fa-microphone text-purple-400"></i>
+                            <span class="text-sm" data-bind="speaker.name">Speaker 1</span>
+                        </div>
+                        <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                            <i class="fas fa-microphone text-purple-400"></i>
+                            <span class="text-sm">Speaker 2</span>
+                        </div>
+                        <!-- @END_MAP )) -->
+                    </div>
+                    
+                    <div class="flex items-center space-x-2 p-2 hover-highlight rounded cursor-pointer">
+                        <i class="fas fa-folder text-yellow-500"></i>
+                        <span class="text-sm">Output Files</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-rian-border">
+                <button class="w-full bg-rian-accent hover:bg-blue-600 text-white py-2 px-4 rounded text-sm font-medium">
+                    <i class="fas fa-plus mr-2"></i>Add Audio Track
+                </button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Top Section: Video Player + Text Grid -->
+            <div class="flex-1 flex min-h-0">
+                <!-- @COMPONENT: VideoPlayer -->
+                <div class="w-1/2 bg-rian-dark p-4">
+                    <div class="bg-black rounded-lg overflow-hidden relative">
+                        <!-- Professional video player placeholder -->
+                        <!-- A scene from a Western movie with a bearded man in period costume -->
+                        <img src="https://images.unsplash.com/photo-1509347528160-9a9e33742cdb?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=450" alt="Video frame showing Western movie scene" class="w-full h-64 object-cover" />
+                        
+                        <!-- Video Controls Overlay -->
+                        <div class="absolute bottom-0 left-0 right-0 video-controls p-4">
+                            <div class="flex items-center space-x-4">
+                                <button class="text-white hover:text-rian-accent" data-event="click:togglePlay">
+                                    <i class="fas fa-play text-lg"></i>
+                                </button>
+                                <button class="text-white hover:text-rian-accent">
+                                    <i class="fas fa-stop"></i>
+                                </button>
+                                <div class="flex-1 bg-gray-600 h-1 rounded">
+                                    <div class="bg-rian-accent h-1 rounded" style="width: 35%"></div>
+                                </div>
+                                <span class="text-white text-sm font-mono" data-bind="video.currentTime">00:01:33.000</span>
+                                <span class="text-white text-sm">/</span>
+                                <span class="text-white text-sm font-mono" data-bind="video.duration">00:04:19.000</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Video Controls Panel -->
+                    <div class="mt-4 bg-rian-panel p-3 rounded">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center space-x-2">
+                                <button class="bg-rian-accent hover:bg-blue-600 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-play mr-1"></i>Play All
+                                </button>
+                                <button class="bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-stop mr-1"></i>Stop All
+                                </button>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-rian-text-secondary">Zoom:</span>
+                                <button class="text-rian-text-secondary hover:text-rian-text">
+                                    <i class="fas fa-search-minus"></i>
+                                </button>
+                                <span class="text-xs">100%</span>
+                                <button class="text-rian-text-secondary hover:text-rian-text">
+                                    <i class="fas fa-search-plus"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- @COMPONENT: TextSegmentGrid -->
+                <div class="w-1/2 bg-rian-secondary p-4">
+                    <div class="h-full flex flex-col">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="font-semibold">Text Segments</h3>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-xs text-rian-text-secondary">1-20 of 21</span>
+                                <button class="text-rian-text-secondary hover:text-rian-text">
+                                    <i class="fas fa-chevron-left"></i>
+                                </button>
+                                <button class="text-rian-text-secondary hover:text-rian-text">
+                                    <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="flex bg-rian-panel rounded-t p-2 text-xs font-medium text-rian-text-secondary">
+                            <div class="w-12">#</div>
+                            <div class="flex-1">Source (English)</div>
+                            <div class="flex-1">Target (Marathi)</div>
+                            <div class="w-20">Speaker</div>
+                        </div>
+                        
+                        <div class="flex-1 overflow-y-auto bg-rian-dark rounded-b">
+                            <!-- @MAP: segments.map(segment => ( -->
+                            <div class="flex p-3 border-b border-rian-border hover-highlight cursor-pointer" data-bind="segment.id">
+                                <div class="w-12 text-xs text-rian-text-secondary" data-bind="segment.index">1</div>
+                                <div class="flex-1 text-sm pr-2" data-bind="segment.source">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</div>
+                                <div class="flex-1 text-sm pr-2" data-bind="segment.target">लोरेम इप्सम डोलर सिट अमेट, कॉन्सेक्टेटुर एडिपिसिंग एलिट।</div>
+                                <div class="w-20">
+                                    <select class="bg-rian-panel border border-rian-border rounded px-2 py-1 text-xs" data-bind="segment.speaker">
+                                        <option>Speaker 1</option>
+                                        <option>Speaker 2</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- Repeat for more segments -->
+                            <div class="flex p-3 border-b border-rian-border hover-highlight cursor-pointer">
+                                <div class="w-12 text-xs text-rian-text-secondary">2</div>
+                                <div class="flex-1 text-sm pr-2">Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</div>
+                                <div class="flex-1 text-sm pr-2">सेड डू इयूस्मॉड टेम्पर इन्सिडिडंट उत लेबर एट डोलोर मैग्ना अलिक्वा।</div>
+                                <div class="w-20">
+                                    <select class="bg-rian-panel border border-rian-border rounded px-2 py-1 text-xs">
+                                        <option>Speaker 1</option>
+                                        <option selected>Speaker 2</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <!-- @END_MAP )) -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- @COMPONENT: MultiTrackEditor -->
+            <div class="h-80 bg-rian-panel border-t border-rian-border">
+                <!-- Timeline Header -->
+                <div class="bg-rian-secondary p-3 border-b border-rian-border">
+                    <div class="flex items-center justify-between">
+                        <h3 class="font-semibold">Multi-Track Timeline</h3>
+                        <div class="flex items-center space-x-4">
+                            <div class="flex items-center space-x-2">
+                                <button class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-magic mr-1"></i>Generate All STS
+                                </button>
+                                <button class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm">
+                                    <i class="fas fa-download mr-1"></i>Export
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline Ruler -->
+                <div class="relative bg-rian-dark p-2 border-b border-rian-border">
+                    <div class="flex items-center justify-between text-xs text-rian-text-secondary font-mono">
+                        <span>00:00</span>
+                        <span>00:30</span>
+                        <span>01:00</span>
+                        <span>01:30</span>
+                        <span>02:00</span>
+                        <span>02:30</span>
+                        <span>03:00</span>
+                        <span>03:30</span>
+                        <span>04:00</span>
+                    </div>
+                    <!-- Timeline cursor -->
+                    <div class="timeline-marker" style="left: 35%;" data-bind="timeline.position"></div>
+                </div>
+
+                <!-- Track Lanes -->
+                <div class="flex-1 overflow-y-auto">
+                    <!-- Source Audio Track -->
+                    <div class="track-lane bg-rian-dark">
+                        <div class="flex">
+                            <div class="w-48 bg-rian-secondary p-3 border-r border-rian-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-sm">Source Audio</div>
+                                        <div class="text-xs text-rian-text-secondary">Original Track</div>
+                                    </div>
+                                    <div class="flex items-center space-x-1">
+                                        <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Play">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Stop">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                        <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Mute">
+                                            <i class="fas fa-volume-mute"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 p-2">
+                                <div class="waveform-container bg-gray-800 rounded" id="source-waveform">
+                                    <!-- Waveform visualization would be rendered here by WaveSurfer.js -->
+                                    <div class="h-full bg-gradient-to-r from-blue-500 to-blue-300 rounded opacity-60"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speaker Track 1 -->
+                    <div class="track-lane bg-rian-dark">
+                        <div class="flex">
+                            <div class="w-48 bg-rian-secondary p-3 border-r border-rian-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-sm flex items-center">
+                                            <span data-bind="speaker1.name">Speaker 1</span>
+                                            <button class="ml-2 text-rian-text-secondary hover:text-rian-text" title="Edit name">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                        </div>
+                                        <select class="mt-1 bg-rian-panel border border-rian-border rounded px-2 py-1 text-xs w-full" data-bind="speaker1.voice">
+                                            <option>Select Voice...</option>
+                                            <option>Aarav (Male)</option>
+                                            <option>Priya (Female)</option>
+                                            <option>Raj (Male)</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex flex-col space-y-1">
+                                        <div class="flex items-center space-x-1">
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Play">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Stop">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Mute">
+                                                <i class="fas fa-volume-mute"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex items-center space-x-1">
+                                            <button class="text-green-400 hover:text-green-300 p-1" title="Generate STS">
+                                                <i class="fas fa-magic"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Solo">
+                                                <i class="fas fa-headphones"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 p-2">
+                                <div class="waveform-container bg-gray-800 rounded" id="speaker1-waveform">
+                                    <!-- Speaker 1 waveform -->
+                                    <div class="h-full bg-gradient-to-r from-purple-500 to-purple-300 rounded opacity-60"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speaker Track 2 -->
+                    <div class="track-lane bg-rian-dark">
+                        <div class="flex">
+                            <div class="w-48 bg-rian-secondary p-3 border-r border-rian-border">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <div class="font-medium text-sm flex items-center">
+                                            <span data-bind="speaker2.name">Speaker 2</span>
+                                            <button class="ml-2 text-rian-text-secondary hover:text-rian-text" title="Edit name">
+                                                <i class="fas fa-edit text-xs"></i>
+                                            </button>
+                                        </div>
+                                        <select class="mt-1 bg-rian-panel border border-rian-border rounded px-2 py-1 text-xs w-full" data-bind="speaker2.voice">
+                                            <option>Select Voice...</option>
+                                            <option selected>Priya (Female)</option>
+                                            <option>Aarav (Male)</option>
+                                            <option>Raj (Male)</option>
+                                        </select>
+                                    </div>
+                                    <div class="flex flex-col space-y-1">
+                                        <div class="flex items-center space-x-1">
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Play">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Stop">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Mute">
+                                                <i class="fas fa-volume-mute"></i>
+                                            </button>
+                                        </div>
+                                        <div class="flex items-center space-x-1">
+                                            <button class="text-green-400 hover:text-green-300 p-1" title="Generate STS">
+                                                <i class="fas fa-magic"></i>
+                                            </button>
+                                            <button class="text-rian-text-secondary hover:text-rian-text p-1" title="Solo">
+                                                <i class="fas fa-headphones"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="flex-1 p-2">
+                                <div class="waveform-container bg-gray-800 rounded" id="speaker2-waveform">
+                                    <!-- Speaker 2 waveform -->
+                                    <div class="h-full bg-gradient-to-r from-green-500 to-green-300 rounded opacity-60"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Add Track Button -->
+                    <div class="track-lane bg-rian-dark border-dashed border-2 border-rian-border">
+                        <div class="flex items-center justify-center h-16">
+                            <button class="text-rian-text-secondary hover:text-rian-text flex items-center space-x-2" data-event="click:addTrack">
+                                <i class="fas fa-plus"></i>
+                                <span>Add Audio Track</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- @COMPONENT: ContextMenu (Hidden by default) -->
+    <div id="contextMenu" class="context-menu hidden shadow-lg py-2 w-48">
+        <div class="px-3 py-2 hover:bg-rian-panel cursor-pointer text-sm">
+            <i class="fas fa-magic mr-2"></i>Generate STS for Selection
+        </div>
+        <div class="px-3 py-2 hover:bg-rian-panel cursor-pointer text-sm">
+            <i class="fas fa-download mr-2"></i>Download Individual Audio
+        </div>
+        <div class="px-3 py-2 hover:bg-rian-panel cursor-pointer text-sm text-red-400">
+            <i class="fas fa-trash mr-2"></i>Delete Audio File
+        </div>
+    </div>
+
+    <!-- @COMPONENT: STSProcessingModal (Hidden by default) -->
+    <div id="stsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-rian-secondary border border-rian-border rounded-lg p-6 w-96">
+            <h3 class="text-lg font-semibold mb-4">Generate Speech-to-Speech</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Select Voice</label>
+                    <select class="w-full bg-rian-panel border border-rian-border rounded px-3 py-2">
+                        <option>Aarav (Male, Hindi)</option>
+                        <option>Priya (Female, Hindi)</option>
+                        <option>Raj (Male, Hindi)</option>
+                        <option>Kavya (Female, Hindi)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Processing Range</label>
+                    <div class="text-sm text-rian-text-secondary">
+                        <span data-mock="true">Selected: 00:01:15 - 00:02:30</span>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 mt-6">
+                    <button class="px-4 py-2 bg-gray-600 hover:bg-gray-500 rounded">Cancel</button>
+                    <button class="px-4 py-2 bg-rian-accent hover:bg-blue-600 rounded">
+                        <i class="fas fa-magic mr-2"></i>Generate STS
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- @END_COMPONENT: MainLayout -->
+
+    <script>
+        (() => {
+            // TODO: Implement WaveSurfer.js integration for waveform visualization
+            // TODO: Implement video player synchronization with timeline
+            // TODO: Implement STS processing workflow
+            // TODO: Implement context menu functionality
+            // TODO: Implement file upload system
+            
+            // Mock functionality for demonstration
+            let isPlaying = false;
+            let currentTime = 0;
+            
+            // Timeline scrubbing simulation
+            function updateTimeline() {
+                if (isPlaying) {
+                    currentTime += 0.1;
+                    // Update timeline position and video time displays
+                    // This would sync with actual media in production
+                }
+            }
+            
+            // Context menu handling
+            document.addEventListener('contextmenu', function(e) {
+                const waveform = e.target.closest('.waveform-container');
+                if (waveform) {
+                    e.preventDefault();
+                    const contextMenu = document.getElementById('contextMenu');
+                    contextMenu.style.left = e.pageX + 'px';
+                    contextMenu.style.top = e.pageY + 'px';
+                    contextMenu.classList.remove('hidden');
+                }
+            });
+            
+            // Hide context menu on click outside
+            document.addEventListener('click', function() {
+                document.getElementById('contextMenu').classList.add('hidden');
+            });
+            
+            // STS Modal handling
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('[title="Generate STS"]')) {
+                    document.getElementById('stsModal').classList.remove('hidden');
+                }
+                
+                if (e.target.closest('#stsModal') && !e.target.closest('.bg-rian-secondary')) {
+                    document.getElementById('stsModal').classList.add('hidden');
+                }
+            });
+            
+            // Simulate waveform loading
+            setTimeout(() => {
+                console.log('Waveform visualization would be initialized here with WaveSurfer.js');
+            }, 1000);
+        })();
+    </script>
+</body>
+</html>

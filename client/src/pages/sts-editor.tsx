@@ -172,23 +172,79 @@ export default function STSEditor() {
     }
   };
 
-  const handleAudioExtracted = async (audioUrl: string, waveformData: number[]) => {
+  // --- WAVEFORM STATE ---
+  // Store waveform data for each track by trackId
+  const [waveforms, setWaveforms] = useState<{ [trackId: number]: WaveSurfer | null }>({});
+
+  // --- AUDIO EXTRACTED HANDLER (after FFmpeg) ---
+  const handleAudioExtracted = async (audioUrl: string) => {
     try {
       // Create or update source audio track with extracted audio
-      await createTrackMutation.mutateAsync({
-        trackType: 'source',
-        trackName: 'Source Audio',
-        audioFile: audioUrl?.replace('/uploads/', '') || undefined
-      });
-
+      // Try to find source track, update if exists, else create
+      const sourceTrack = tracks.find((t: any) => t.trackType === 'source');
+      const audioFileName = audioUrl?.replace('/uploads/', '') || undefined;
+      if (sourceTrack) {
+        await updateTrackMutation.mutateAsync({ id: sourceTrack.id, updates: { audioFile: audioFileName } });
+      } else {
+        await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: audioFileName });
+      }
       toast({
         title: "Audio Extracted",
         description: "Audio has been extracted from video and added to source track."
       });
     } catch (error) {
-      console.error('Failed to create source track:', error);
+      toast({ title: "Audio Extract Failed", description: "Could not extract audio from video.", variant: "destructive" });
     }
   };
+
+  // --- GENERIC AUDIO UPLOAD HANDLER (for source & speakers) ---
+  const handleTrackAudioUpload = async (file: File, track: any) => {
+    try {
+      // Upload file
+      const uploadResult = await uploadFileMutation.mutateAsync(file);
+      if (!uploadResult.filename) throw new Error('Upload failed');
+      // Update track with new audio file
+      await updateTrackMutation.mutateAsync({ id: track.id, updates: { audioFile: uploadResult.filename } });
+      toast({ title: "Audio Uploaded", description: `${track.trackName} audio updated.` });
+    } catch (error) {
+      toast({ title: "Upload Failed", description: "Failed to upload audio.", variant: "destructive" });
+    }
+  };
+
+  // --- SOURCE AUDIO UPLOAD HANDLER ---
+  const handleSourceAudioUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    // If video, extract audio via backend
+    if (file.type.startsWith('video/')) {
+      try {
+        const uploadData = await uploadFileMutation.mutateAsync(file);
+        if (!uploadData.filename) throw new Error('Video upload failed');
+        // Call backend to extract audio
+        const audioData = await apiRequest('/api/extract-audio', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath: `uploads/${uploadData.filename}` })
+        });
+        if (!audioData.success) throw new Error(audioData.message || 'Audio extraction failed');
+        await handleAudioExtracted(audioData.audioFile);
+      } catch (error: any) {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      }
+    } else if (file.type.startsWith('audio/')) {
+      // Directly upload audio to source track
+      const sourceTrack = tracks.find((t: any) => t.trackType === 'source');
+      if (sourceTrack) {
+        await handleTrackAudioUpload(file, sourceTrack);
+      } else {
+        // If no source track, create one
+        const uploadResult = await uploadFileMutation.mutateAsync(file);
+        await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: uploadResult.filename });
+      }
+      toast({ title: 'Success', description: 'Source audio updated.' });
+    }
+  };
+
 
   const handleContextMenu = (event: React.MouseEvent, trackId: number) => {
     event.preventDefault();
@@ -275,18 +331,24 @@ export default function STSEditor() {
                     onPlay={() => {}}
                     onStop={() => {}}
                     onMute={() => {}}
+                    onFileUpload={(file) => handleTrackAudioUpload(file, sourceTrack)}
+                    waveformContainerId={`waveform-source-${sourceTrack.id}`}
                   />
                 ) : (
                   <div className="rian-surface rounded-lg border rian-border p-4">
+                    <input
+                      type="file"
+                      accept="audio/*,video/*"
+                      style={{ display: 'none' }}
+                      id="source-audio-upload"
+                      onChange={handleSourceAudioUpload}
+                    />
                     <button
-                      onClick={() => createTrackMutation.mutate({
-                        trackType: 'source',
-                        trackName: 'Source Audio'
-                      })}
+                      onClick={() => document.getElementById('source-audio-upload')?.click()}
                       className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
                     >
                       <div className="text-xl mb-2">🎤</div>
-                      <p>Add Source Audio Track</p>
+                      <p>Upload Source Audio/Video</p>
                     </button>
                   </div>
                 )}

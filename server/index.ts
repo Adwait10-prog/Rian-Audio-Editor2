@@ -59,7 +59,7 @@ app.use((req, res, next) => {
   // ALWAYS serve the app on port 5000
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = 5000;
+  const port = 5001;
   server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
     log(`available at: https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`);

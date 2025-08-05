@@ -164,10 +164,72 @@ export async function registerRoutes(app: Express): Promise<Server> {
         filename: req.file.filename,
         originalName: req.file.originalname,
         size: req.file.size,
-        url: fileUrl
+        url: fileUrl,
+        filePath: req.file.path // Add file path for audio extraction
       });
     } catch (error) {
+      console.error('File upload failed:', error);
       res.status(500).json({ message: "File upload failed" });
+    }
+  });
+
+  // FFmpeg Audio Extraction Endpoint
+  app.post("/api/extract-audio", upload.single('file'), async (req, res) => {
+    console.log('extract-audio req.file:', req.file);
+    console.log('extract-audio req.body:', req.body);
+    
+    try {
+      let inputPath: string;
+      let originalName: string;
+      
+      if (req.file) {
+        // If file is uploaded directly
+        inputPath = req.file.path;
+        originalName = req.file.originalname || 'extracted_audio';
+      } else if (req.body.filePath) {
+        // If file path is provided in the request body
+        inputPath = req.body.filePath;
+        originalName = path.basename(inputPath, path.extname(inputPath)) + '.wav';
+      } else {
+        return res.status(400).json({ message: "No file or file path provided" });
+      }
+
+      // Generate output filename
+      const outputName = `${path.basename(originalName, path.extname(originalName))}.wav`;
+      const outputPath = path.join('uploads', outputName);
+      
+      console.log(`Extracting audio from ${inputPath} to ${outputPath}`);
+      
+      // Use FFmpeg to extract audio
+      const ffmpegCmd = `ffmpeg -y -i "${inputPath}" -vn -acodec pcm_s16le -ar 44100 -ac 2 "${outputPath}"`;
+      console.log('Running FFmpeg command:', ffmpegCmd);
+      
+      const { stdout, stderr } = await execAsync(ffmpegCmd);
+      console.log('FFmpeg stdout:', stdout);
+      if (stderr) console.error('FFmpeg stderr:', stderr);
+      
+      // Verify the output file was created
+      if (!fs.existsSync(outputPath)) {
+        throw new Error('FFmpeg did not create the output file');
+      }
+      
+      const stats = fs.statSync(outputPath);
+      console.log(`Extracted audio file size: ${stats.size} bytes`);
+      
+      // Respond with audio file URL and path
+      res.json({ 
+        success: true,
+        audioFile: outputName,
+        audioUrl: `/uploads/${outputName}`,
+        fileSize: stats.size
+      });
+    } catch (error) {
+      console.error('FFmpeg extraction failed:', error);
+      res.status(500).json({ 
+        success: false,
+        message: "Audio extraction failed",
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
 

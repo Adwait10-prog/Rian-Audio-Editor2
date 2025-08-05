@@ -11,10 +11,13 @@ export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayer
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+
   const [volume, setVolume] = useState(60);
   const [isLoading, setIsLoading] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -92,10 +95,21 @@ export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayer
   };
 
   useEffect(() => {
+    console.log('Video file changed:', videoFile);
     if (videoFile) {
+      const videoSrc = videoFile.startsWith('http') || videoFile.startsWith('/') ? videoFile : `/uploads/${videoFile}`;
+      console.log('Video source URL:', videoSrc);
       extractAudioFromVideo();
     }
   }, [videoFile]);
+
+  // Add error handling for video load
+  const handleVideoError = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.target as HTMLVideoElement;
+    console.error('Video error:', video.error);
+    console.error('Video network state:', video.networkState);
+    console.error('Video ready state:', video.readyState);
+  };
 
   const progressPercentage = (currentTime / duration) * 100;
 
@@ -105,13 +119,17 @@ export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayer
         <div className="bg-black rounded-lg h-full relative overflow-hidden">
           {videoFile ? (
             <video
+              key={videoFile} // Force re-mount when videoFile changes
               ref={videoRef}
               className="w-full h-full object-contain"
-              src={`/uploads/${videoFile}`}
+              src={videoFile.startsWith('http') || videoFile.startsWith('/') ? videoFile : `/uploads/${videoFile}`}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => setIsPlaying(true)}
               onPause={() => setIsPlaying(false)}
+              onError={handleVideoError}
+              onCanPlay={() => console.log('Video can play')}
+              onLoadStart={() => console.log('Video load started')}
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">
