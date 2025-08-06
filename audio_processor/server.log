@@ -1,0 +1,27 @@
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development PORT=5001 tsx server/index.ts
+
+⚠️ ELEVENLABS_API_KEY not found in environment variables
+Re-optimizing dependencies because lockfile has changed
+🦀 [Rust Audio] Service available: true
+2:58:45 PM [express] serving on port 5001
+2:58:45 PM [express] available at: https://undefined.undefined.repl.co
+3:00:11 PM [express] GET /api/projects/1/tracks 200 in 4ms :: [{"id":1,"projectId":1,"trackType":"so…
+🎵 [Audio Processing] Starting high-performance processing...
+🎵 [Audio Processing] Processing file: /Users/manishshinde/Rian-Audio-Editor2/uploads/test_audio.wav
+3:01:50 PM [express] POST /api/process-audio 404 in 1ms :: {"success":false,"message":"Input file no…
+🎵 [Audio Processing] Starting high-performance processing...
+🎵 [Audio Processing] Processing file: /Users/manishshinde/Rian-Audio-Editor2/uploads/test_audio.wav
+🦀 [Audio Processing] Using Rust processor with Symphonia...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/test_audio.wav
+🦀 [Rust Audio] Processed successfully: 575 peaks, 5s duration
+🦀 [Audio Processing] Success! 575 peaks, 5s
+3:02:49 PM [express] POST /api/process-audio 200 in 19ms :: {"success":true,"processor":"rust-sympho…
+🎵 [Audio Processing] Starting high-performance processing...
+🎵 [Audio Processing] Processing file: /Users/manishshinde/Rian-Audio-Editor2/uploads/test_audio.wav
+🦀 [Audio Processing] Using Rust processor with Symphonia...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/test_audio.wav
+🦀 [Rust Audio] Processed successfully: 575 peaks, 5s duration
+🦀 [Audio Processing] Success! 575 peaks, 5s
+3:03:00 PM [express] POST /api/process-audio 200 in 7ms :: {"success":true,"processor":"rust-symphon…

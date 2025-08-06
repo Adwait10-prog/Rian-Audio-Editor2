@@ -16,19 +16,6 @@ interface SpeakerTrackProps {
   onNameEdit: () => void;
   onVoiceChange: (voiceCloneId: number) => void;
   onFileUpload: (file: File) => void;
-}
-
-interface SpeakerTrackProps {
-  track: any;
-  voiceClones: any[];
-  onContextMenu: (event: React.MouseEvent, trackId: number) => void;
-  onPlay: () => void;
-  onStop: () => void;
-  onMute: () => void;
-  onSTSGenerate: () => void;
-  onNameEdit: () => void;
-  onVoiceChange: (voiceCloneId: number) => void;
-  onFileUpload: (file: File) => void;
   zoom: number;
   duration: number;
   setZoom: (z: number) => void;

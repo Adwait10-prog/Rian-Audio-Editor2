@@ -1,0 +1,98 @@
+warning: unused import: `anyhow`
+ --> src/audio_processor/mod.rs:1:14
+  |
+1 | use anyhow::{anyhow, Result};
+  |              ^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `actix_web::web`
+ --> src/audio_processor/mod.rs:2:5
+  |
+2 | use actix_web::web;
+  |     ^^^^^^^^^^^^^^
+
+warning: unused import: `bincode`
+ --> src/audio_processor/mod.rs:3:5
+  |
+3 | use bincode;
+  |     ^^^^^^^
+
+warning: unused import: `PathBuf`
+  --> src/audio_processor/mod.rs:11:23
+   |
+11 | use std::path::{Path, PathBuf};
+   |                       ^^^^^^^
+
+warning: unused import: `tokio::io::AsyncReadExt`
+  --> src/audio_processor/mod.rs:19:5
+   |
+19 | use tokio::io::AsyncReadExt;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: `audio_processor` (lib) generated 5 warnings (run `cargo fix --lib -p audio_processor` to apply 5 suggestions)
+warning: unused import: `error`
+ --> src/main.rs:3:5
+  |
+3 |     error, get, post, web, App, Error, HttpRequest, HttpResponse, HttpServer, Responder, Result,
+  |     ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `Deserialize`
+ --> src/main.rs:5:13
+  |
+5 | use serde::{Deserialize, Serialize};
+  |             ^^^^^^^^^^^
+
+warning: unused import: `std::path::Path`
+ --> src/main.rs:6:5
+  |
+6 | use std::path::Path;
+  |     ^^^^^^^^^^^^^^^
+
+warning: unused import: `std::time::Instant`
+ --> src/main.rs:8:5
+  |
+8 | use std::time::Instant;
+  |     ^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `anyhow`
+ --> src/audio_processor/mod.rs:1:14
+  |
+1 | use anyhow::{anyhow, Result};
+  |              ^^^^^^
+
+warning: unused imports: `AudioError`, `ImportResult`, `PeakCache`, and `WaveformData`
+  --> src/main.rs:14:5
+   |
+14 |     AudioError, AudioProcessor, ImportResult, PeakCache, WaveformData, CACHE_DIR, UPLOAD_DIR,
+   |     ^^^^^^^^^^                  ^^^^^^^^^^^^  ^^^^^^^^^  ^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> src/main.rs:89:9
+   |
+89 |     let mut processor = data.audio_processor.lock().unwrap();
+   |         ----^^^^^^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` on by default
+
+warning: variant `Processing` is never constructed
+  --> src/audio_processor/mod.rs:64:5
+   |
+50 | pub enum AudioError {
+   |          ---------- variant in this enum
+...
+64 |     Processing(String),
+   |     ^^^^^^^^^^
+   |
+   = note: `AudioError` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` on by default
+
+warning: `audio_processor` (bin "audio_processor") generated 12 warnings (4 duplicates) (run `cargo fix --bin "audio_processor"` to apply 7 suggestions)
+    Finished `release` profile [optimized] target(s) in 0.36s
+     Running `target/release/audio_processor`
+Starting audio processor server on 0.0.0.0:8081
+Error: Os { code: 48, kind: AddrInUse, message: "Address already in use" }

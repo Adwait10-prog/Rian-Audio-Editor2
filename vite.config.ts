@@ -6,7 +6,23 @@ import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
+    runtimeErrorOverlay({
+      overlay: {
+        // Ignore expected WaveSurfer cleanup errors during development
+        filter: (error) => {
+          // Ignore AbortError which occurs during hot reloading
+          if (error.name === 'AbortError' || error.message.includes('signal is aborted without reason')) {
+            return false;
+          }
+          // Ignore WaveSurfer-related cleanup errors
+          if (error.message.includes('wavesurferRef.current.destroy') || 
+              error.stack?.includes('enhanced-waveform.tsx')) {
+            return false;
+          }
+          return true;
+        }
+      }
+    }),
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -33,5 +49,16 @@ export default defineConfig({
       strict: true,
       deny: ["**/.*"],
     },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+      '/uploads': {
+        target: 'http://localhost:5001',
+        changeOrigin: true,
+      },
+    },
+    port: 4000,
   },
 });

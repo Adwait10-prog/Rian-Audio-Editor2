@@ -1,0 +1,36 @@
+
+> rest-express@1.0.0 electron
+> electron electron-main.cjs
+
+Starting Electron app...
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development PORT=5001 tsx server/index.ts
+
+⚠️ ELEVENLABS_API_KEY not found in environment variables
+🦀 [Rust Audio] Service available: true
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5001
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at node:net:2205:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5001
+}
+
+Node.js v23.11.0
+Creating window...
+Window displayed successfully
+2025-08-06 15:23:23.136 Electron[10799:1929656] +[IMKClient subclass]: chose IMKClient_Legacy
+2025-08-06 15:23:23.136 Electron[10799:1929656] +[IMKInputSession subclass]: chose IMKInputSession_Legacy
+sysctlbyname for kern.hv_vmm_present failed with status -1

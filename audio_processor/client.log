@@ -1,0 +1,14 @@
+
+> rest-express@1.0.0 dev:client
+> vite
+
+Port 4000 is in use, trying another one...
+Port 4001 is in use, trying another one...
+
+  VITE v5.4.19  ready in 132 ms
+
+  ➜  Local:   http://localhost:4002/
+  ➜  Network: use --host to expose
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme

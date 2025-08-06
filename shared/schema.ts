@@ -20,6 +20,7 @@ export const audioTracks = pgTable("audio_tracks", {
   voiceClone: text("voice_clone"),
   isProcessed: boolean("is_processed").default(false),
   waveformData: jsonb("waveform_data"),
+  cacheKey: text("cache_key"), // Cache key for waveform data from the audio processor
 });
 
 export const voiceClones = pgTable("voice_clones", {

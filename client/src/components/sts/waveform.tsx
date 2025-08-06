@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { Bot, Scissors, Play, Pause } from "lucide-react";
+import { Bot, Scissors, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import WaveSurfer from 'wavesurfer.js';
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js';
 
@@ -65,8 +65,8 @@ export default function Waveform({
           // Visual feedback: add a region at playhead
           const ws = wavesurferRef.current as any;
           ws.addRegion && ws.addRegion({
-            start: currentTime,
-            end: currentTime + 0.01,
+            start: currentTime ?? 0,
+            end: (currentTime ?? 0) + 0.01,
             color: 'rgba(250, 204, 21, 0.7)'
           });
         }
@@ -106,9 +106,7 @@ export default function Waveform({
         hideScrollbar: true,
         minPxPerSec: zoom, // use px per sec for zoom
         plugins: [
-          RegionsPlugin.create({
-            dragSelection: true,
-          })
+          RegionsPlugin.create()
         ]
       });
       

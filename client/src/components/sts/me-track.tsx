@@ -11,6 +11,7 @@ interface METrackProps {
   onStop: () => void;
   onMute: () => void;
   onFileUpload: (file: File) => void;
+  zoom: number;
 }
 
 export default function METrack({
@@ -19,7 +20,8 @@ export default function METrack({
   onPlay,
   onStop,
   onMute,
-  onFileUpload
+  onFileUpload,
+  zoom
 }: METrackProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
@@ -99,6 +101,7 @@ export default function METrack({
             <Waveform
               isActive={true}
               onContextMenu={(event) => track && onContextMenu(event, track.id)}
+              zoom={zoom}
             />
           ) : (
             <div 

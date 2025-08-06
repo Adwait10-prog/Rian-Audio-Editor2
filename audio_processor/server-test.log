@@ -1,0 +1,16 @@
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development PORT=5001 tsx server/index.ts
+
+⚠️ ELEVENLABS_API_KEY not found in environment variables
+3:34:58 PM [express] serving on port 5001
+3:34:58 PM [express] available at: https://undefined.undefined.repl.co
+🦀 [Rust Audio] Service available: true
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+3:35:13 PM [express] GET /api/projects 200 in 2ms :: [{"name":"Sample STS Project","clientName":"Dem…
+3:35:33 PM [vite] hmr update /src/pages/sts-editor.tsx, /src/index.css?v=kuaACaXa7KqXG9WQjjgGD
+3:35:40 PM [vite] hmr update /src/pages/sts-editor.tsx, /src/index.css?v=kuaACaXa7KqXG9WQjjgGD
+3:36:03 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:36:33 PM [express] GET /api/projects/1/tracks 200 in 0ms :: [{"id":1,"projectId":1,"trackType":"so…

@@ -1,0 +1,24 @@
+
+> rest-express@1.0.0 electron:simple
+> electron electron-simple.cjs
+
+Electron app starting...
+Make sure to run "npm run dev:server" in another terminal first!
+Creating Electron window...
+Failed to load http://localhost:5001/: ERR_CONNECTION_REFUSED (-102)
+Make sure the server is running on http://localhost:5001
+(node:1152) electron: Failed to load URL: http://localhost:5001/ with error: ERR_CONNECTION_REFUSED
+(Use `Electron --trace-warnings ...` to show where the warning was created)
+(electron) 'console-message' arguments are deprecated and will be removed. Please use Event<WebContentsConsoleMessageEventParams> object instead.
+[RENDERER] %cElectron Security Warning (Insecure Content-Security-Policy) font-weight: bold; This renderer process has either no Content Security
+  Policy set or a policy with "unsafe-eval" enabled. This exposes users of
+  this app to unnecessary security risks.
+
+For more information and help, consult
+https://electronjs.org/docs/tutorial/security.
+This warning will not show up
+once the app is packaged.
+Window ready, showing...
+2025-08-06 14:34:41.363 Electron[1152:1862074] +[IMKClient subclass]: chose IMKClient_Legacy
+2025-08-06 14:34:41.363 Electron[1152:1862074] +[IMKInputSession subclass]: chose IMKInputSession_Legacy
+/Users/manishshinde/Rian-Audio-Editor2/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron exited with signal SIGTERM

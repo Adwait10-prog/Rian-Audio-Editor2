@@ -166,12 +166,15 @@ export class MemStorage implements IStorage {
   async createAudioTrack(insertTrack: InsertAudioTrack): Promise<AudioTrack> {
     const id = this.currentAudioTrackId++;
     const track: AudioTrack = {
-      ...insertTrack,
       id,
+      projectId: insertTrack.projectId,
+      trackType: insertTrack.trackType,
+      trackName: insertTrack.trackName,
       audioFile: insertTrack.audioFile || null,
       voiceClone: insertTrack.voiceClone || null,
-      isProcessed: insertTrack.isProcessed || false,
+      isProcessed: insertTrack.isProcessed ?? null,
       waveformData: insertTrack.waveformData || null,
+      cacheKey: insertTrack.cacheKey || null,
     };
     this.audioTracks.set(id, track);
     return track;

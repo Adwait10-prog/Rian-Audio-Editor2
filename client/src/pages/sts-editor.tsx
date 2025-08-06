@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -13,8 +13,14 @@ import TrackSection from "@/components/sts/track-section";
 import ContextMenu from "@/components/sts/context-menu";
 import STSModal from "@/components/sts/sts-modal";
 import EditSpeakerModal from "@/components/sts/edit-speaker-modal";
+import MediaImportPanel from "@/components/sts/media-import-panel";
+import ScrollableTimeline from "@/components/sts/scrollable-timeline";
+import EnhancedWaveform from "@/components/sts/enhanced-waveform";
+import { useGlobalPlayhead } from "@/hooks/useGlobalPlayhead";
 import { useToast } from "@/hooks/use-toast";
+import { logger } from "@/lib/debug-logger";
 import type { AudioTrack as AudioTrackType, VoiceClone } from "@shared/schema";
+import type WaveSurfer from 'wavesurfer.js';
 
 export default function STSEditor() {
   const [currentProject] = useState({ id: 1, name: "Sample Project" });
@@ -29,21 +35,29 @@ export default function STSEditor() {
   const [editSpeakerModal, setEditSpeakerModal] = useState<{ visible: boolean; trackId?: number; currentName?: string }>({
     visible: false
   });
-  const [isPlaying, setIsPlaying] = useState(false);
-  // Global timeline zoom state
-  const [zoomLevel, setZoomLevel] = useState(100);
+  
+  // Global playhead state using custom hook
+  const [playheadState, playheadActions] = useGlobalPlayhead();
+  
   const [viewSettings, setViewSettings] = useState({
     showVideo: true,
     showAudio: true,
     showME: true
   });
   
+  const [masterMuted, setMasterMuted] = useState(false);
+  
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const { data: tracks = [], isLoading } = useQuery({
+  // Initialize logger
+  useEffect(() => {
+    logger.info('STS Editor', 'Initializing audio editor interface');
+  }, []);
+
+  const { data: tracks = [], isLoading } = useQuery<AudioTrackType[]>({
     queryKey: ["/api/projects", currentProject.id, "tracks"],
     enabled: !!currentProject.id
   });
@@ -52,66 +66,87 @@ export default function STSEditor() {
     queryKey: ["/api/voice-clones"]
   });
 
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<{ id: number; name: string; videoFile?: string; createdAt: string }>({
     queryKey: ["/api/projects", currentProject.id],
     enabled: !!currentProject.id
   });
 
-  // Timeline scroll and duration state
-  const timelineScrollRef = useRef<HTMLDivElement>(null);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [timelineWidth, setTimelineWidth] = useState(2000); // fallback, will update below
-  const [currentTime, setCurrentTime] = useState(0);
-
-  // Compute max duration from all tracks (for ruler/grid)
-  const maxDuration = 300; // TODO: compute from audio tracks
-
-  // Handle scroll sync
-  const handleTimelineScroll = () => {
-    if (timelineScrollRef.current) setScrollLeft(timelineScrollRef.current.scrollLeft);
+  // Compute max duration from all tracks
+  const computeMaxDuration = () => {
+    let maxDur = 300; // Default 5 minutes
+    
+    // TODO: Add audio track durations when available
+    tracks.forEach(track => {
+      // If we had duration metadata, we'd use it here
+    });
+    
+    return maxDur;
   };
 
-  // Mouse wheel + Ctrl/Cmd zoom
-  const handleTimelineWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-    if (!(e.ctrlKey || e.metaKey)) return;
-    e.preventDefault();
-    const rect = timelineScrollRef.current?.getBoundingClientRect();
-    const mouseX = rect ? e.clientX - rect.left : 0;
-    const focusTime = ((mouseX + (timelineScrollRef.current?.scrollLeft || 0)) / zoomLevel) || 0;
-    const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
-    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= zoomLevel);
-    let newZoom = zoomLevel;
-    if (e.deltaY > 0 && currentIndex > 0) newZoom = ZOOM_LEVELS[currentIndex - 1];
-    else if (e.deltaY < 0 && currentIndex < ZOOM_LEVELS.length - 1) newZoom = ZOOM_LEVELS[currentIndex + 1];
-    if (newZoom !== zoomLevel) {
-      setZoomLevel(newZoom);
-      setTimeout(() => {
-        if (timelineScrollRef.current) {
-          const newMouseX = focusTime * newZoom;
-          timelineScrollRef.current.scrollLeft = Math.max(0, newMouseX - mouseX);
-        }
-      }, 0);
-    }
-  };
+  const maxDuration = computeMaxDuration();
 
-  // Snap to major interval (from TimelineRuler)
-  const handleSnap = (snapTime: number) => {
-    setCurrentTime(snapTime);
-    // Optionally, scroll to snapped time
-    if (timelineScrollRef.current) {
-      timelineScrollRef.current.scrollLeft = Math.max(0, snapTime * zoomLevel - 100);
-    }
-  };
+  // Global event listeners for timeline interactions
+  useEffect(() => {
+    const handleZoomRequest = (e: CustomEvent) => {
+      const { direction, focusTime, mouseX } = e.detail;
+      const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
+      const currentIndex = ZOOM_LEVELS.findIndex(z => z >= playheadState.zoom);
+      
+      let newZoom = playheadState.zoom;
+      if (direction === 'out' && currentIndex > 0) {
+        newZoom = ZOOM_LEVELS[currentIndex - 1];
+      } else if (direction === 'in' && currentIndex < ZOOM_LEVELS.length - 1) {
+        newZoom = ZOOM_LEVELS[currentIndex + 1];
+      }
+      
+      if (newZoom !== playheadState.zoom) {
+        logger.timelineEvent('STS Editor', `Zoom changed: ${playheadState.zoom} → ${newZoom}px/sec`);
+        playheadActions.setZoom(newZoom);
+      }
+    };
+
+    const handlePlayPause = () => {
+      if (playheadState.isPlaying) {
+        playheadActions.pause();
+      } else {
+        playheadActions.play();
+      }
+    };
+
+    window.addEventListener('timeline-zoom-request', handleZoomRequest as EventListener);
+    window.addEventListener('timeline-play-pause', handlePlayPause);
+
+    return () => {
+      window.removeEventListener('timeline-zoom-request', handleZoomRequest as EventListener);
+      window.removeEventListener('timeline-play-pause', handlePlayPause);
+    };
+  }, [playheadState, playheadActions]);
 
   const uploadFileMutation = useMutation({
     mutationFn: async (file: File) => {
-      const formData = new FormData();
-      formData.append('file', file);
-      const response = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      return response.json();
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Use full URL for Electron compatibility
+        const baseUrl = window.location.origin;
+        const response = await fetch(`${baseUrl}/api/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          const error = await response.text();
+          throw new Error(`Upload failed: ${response.status} - ${error}`);
+        }
+        
+        const result = await response.json();
+        console.log('Upload successful:', result);
+        return result;
+      } catch (error) {
+        console.error('Upload error:', error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
@@ -225,23 +260,43 @@ export default function STSEditor() {
   const [waveforms, setWaveforms] = useState<{ [trackId: number]: WaveSurfer | null }>({});
 
   // --- AUDIO EXTRACTED HANDLER (after FFmpeg) ---
-  const handleAudioExtracted = async (audioUrl: string) => {
+  const handleAudioExtracted = async (audioUrl: string, waveformData?: number[]) => {
+    logger.audioEvent('STS Editor', 'Audio extraction completed', undefined, { audioUrl, waveformPoints: waveformData?.length });
+    
     try {
       // Create or update source audio track with extracted audio
-      // Try to find source track, update if exists, else create
-      const sourceTrack = tracks.find((t: any) => t.trackType === 'source');
+      const sourceTrack = tracks.find((t) => t.trackType === 'source');
       const audioFileName = audioUrl?.replace('/uploads/', '') || undefined;
+      
+      const trackData = {
+        audioFile: audioFileName,
+        waveformData: waveformData || []
+      };
+      
       if (sourceTrack) {
-        await updateTrackMutation.mutateAsync({ id: sourceTrack.id, updates: { audioFile: audioFileName } });
+        logger.debug('STS Editor', 'Updating existing source track', { trackId: sourceTrack.id });
+        await updateTrackMutation.mutateAsync({ id: sourceTrack.id, updates: trackData });
       } else {
-        await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: audioFileName });
+        logger.debug('STS Editor', 'Creating new source track');
+        await createTrackMutation.mutateAsync({ 
+          trackType: 'source', 
+          trackName: 'Source Audio', 
+          ...trackData
+        });
       }
+      
       toast({
-        title: "Audio Extracted",
-        description: "Audio has been extracted from video and added to source track."
+        title: "✅ Audio Extracted Successfully",
+        description: `Audio extracted with ${waveformData?.length || 0} waveform points`
       });
+      
     } catch (error) {
-      toast({ title: "Audio Extract Failed", description: "Could not extract audio from video.", variant: "destructive" });
+      logger.error('STS Editor', 'Audio extraction handler failed', error);
+      toast({ 
+        title: "Audio Extract Failed", 
+        description: "Could not save extracted audio to track.", 
+        variant: "destructive" 
+      });
     }
   };
 
@@ -269,7 +324,7 @@ export default function STSEditor() {
         const uploadData = await uploadFileMutation.mutateAsync(file);
         if (!uploadData.filename) throw new Error('Video upload failed');
         // Call backend to extract audio
-        const audioData = await apiRequest('/api/extract-audio', {
+        const audioData = await apiRequest(`${window.location.origin}/api/extract-audio`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ filePath: `uploads/${uploadData.filename}` })
@@ -281,7 +336,7 @@ export default function STSEditor() {
       }
     } else if (file.type.startsWith('audio/')) {
       // Directly upload audio to source track
-      const sourceTrack = tracks.find((t: any) => t.trackType === 'source');
+      const sourceTrack = tracks.find((t) => t.trackType === 'source');
       if (sourceTrack) {
         await handleTrackAudioUpload(file, sourceTrack);
       } else {
@@ -305,13 +360,22 @@ export default function STSEditor() {
   };
 
   const handlePlayAll = () => {
-    setIsPlaying(!isPlaying);
-    // Implementation would control all audio tracks
+    console.log('🎮 [STS Editor] Play button clicked:', {
+      currentlyPlaying: playheadState.isPlaying,
+      action: playheadState.isPlaying ? 'PAUSE' : 'PLAY'
+    });
+    
+    logger.audioEvent('STS Editor', playheadState.isPlaying ? 'Stop all' : 'Play all');
+    if (playheadState.isPlaying) {
+      playheadActions.pause();
+    } else {
+      playheadActions.play();
+    }
   };
 
   const handleStopAll = () => {
-    setIsPlaying(false);
-    // Implementation would stop all audio tracks
+    logger.audioEvent('STS Editor', 'Stop all');
+    playheadActions.stop();
   };
 
   const handleSpeakerNameEdit = (trackId: number, currentName: string) => {
@@ -330,9 +394,22 @@ export default function STSEditor() {
     });
   };
 
-  const sourceTrack = tracks.find(t => t.trackType === 'source');
-  const speakerTracks = tracks.filter(t => t.trackType === 'speaker');
-  const meTrack = tracks.find(t => t.trackType === 'me');
+  const sourceTrack = tracks.find((t) => t.trackType === 'source');
+  const speakerTracks = tracks.filter((t) => t.trackType === 'speaker');
+  const meTrack = tracks.find((t) => t.trackType === 'me');
+
+  // Debug: Log track data to understand the structure
+  useEffect(() => {
+    if (sourceTrack) {
+      console.log(`📊 [STS Editor] Source track data:`, {
+        id: sourceTrack.id,
+        audioFile: sourceTrack.audioFile,
+        waveformDataType: typeof sourceTrack.waveformData,
+        waveformDataLength: Array.isArray(sourceTrack.waveformData) ? sourceTrack.waveformData.length : 'not array',
+        waveformDataSample: Array.isArray(sourceTrack.waveformData) ? sourceTrack.waveformData.slice(0, 5) : sourceTrack.waveformData
+      });
+    }
+  }, [sourceTrack]);
 
   if (isLoading) {
     return (
@@ -342,201 +419,202 @@ export default function STSEditor() {
     );
   }
 
-  // --- GLOBAL TIMELINE CONTROLS ---
+  // --- PROFESSIONAL TIMELINE CONTROLS ---
   const handleZoomIn = () => {
-    const newZoom = Math.min(zoomLevel * 1.5, 100);
-    setZoomLevel(newZoom);
-    // Broadcast zoom to all waveform instances
-    document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
+    const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
+    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= playheadState.zoom);
+    if (currentIndex < ZOOM_LEVELS.length - 1) {
+      const newZoom = ZOOM_LEVELS[currentIndex + 1];
+      logger.timelineEvent('STS Editor', `Zoom in: ${playheadState.zoom} → ${newZoom}px/sec`);
+      playheadActions.setZoom(newZoom);
+    }
   };
+  
   const handleZoomOut = () => {
-    const newZoom = Math.max(zoomLevel / 1.5, 1);
-    setZoomLevel(newZoom);
-    document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
+    const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
+    const currentIndex = ZOOM_LEVELS.findIndex(z => z >= playheadState.zoom);
+    if (currentIndex > 0) {
+      const newZoom = ZOOM_LEVELS[currentIndex - 1];
+      logger.timelineEvent('STS Editor', `Zoom out: ${playheadState.zoom} → ${newZoom}px/sec`);
+      playheadActions.setZoom(newZoom);
+    }
   };
+  
   const handleSplit = () => {
-    document.dispatchEvent(new CustomEvent('global-waveform-split'));
+    logger.timelineEvent('STS Editor', `Split at ${playheadState.currentTime.toFixed(3)}s`);
+    // TODO: Implement split functionality
+    toast({
+      title: "Split Tool",
+      description: `Split at ${playheadState.currentTime.toFixed(2)}s - Feature coming soon!`
+    });
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[var(--rian-dark)] text-white">
+    <div className="flex flex-col h-screen bg-[var(--rian-dark)] text-white overflow-hidden">
+      {/* Menu Bar */}
       <MenuBar
         onPlayAll={handlePlayAll}
         onStopAll={handleStopAll}
-        isPlaying={isPlaying}
+        isPlaying={playheadState.isPlaying}
         onFileUpload={handleFileUpload}
         onVideoUpload={handleVideoUpload}
         onNavigateToProjects={() => setLocation('/')}
         viewSettings={viewSettings}
         onViewSettingsChange={setViewSettings}
       />
+      
+      {/* Master Timeline Controls */}
       <TimelineControls
         onZoomIn={handleZoomIn}
         onZoomOut={handleZoomOut}
         onSplit={handleSplit}
-        zoomLevel={zoomLevel}
+        zoomLevel={playheadState.zoom}
+        isPlaying={playheadState.isPlaying}
+        onPlayPause={handlePlayAll}
+        onStop={handleStopAll}
+        isMuted={masterMuted}
+        onMuteToggle={() => setMasterMuted(!masterMuted)}
       />
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex h-full">
-          {/* Left Media Pool Sidebar */}
-          <div className="w-64 bg-[var(--rian-surface)] border-r border-[var(--rian-border)] flex flex-col">
-            <div className="p-4 border-b border-[var(--rian-border)]">
-              <h2 className="text-lg font-semibold text-white flex items-center">
-                📁 Media Pool
-              </h2>
+      
+      {/* Main Content Area */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: Enhanced Media Import Panel */}
+        <MediaImportPanel
+          onAudioUpload={handleFileUpload}
+          onVideoUpload={handleVideoUpload}
+          onAddAudioTrack={(trackType, trackName) => createTrackMutation.mutate({ trackType, trackName })}
+          speakerCount={speakerTracks.length}
+          isUploading={uploadFileMutation.isPending}
+        />
+        
+        {/* Right: Professional Timeline Interface */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Video Player with Sync */}
+          {viewSettings.showVideo && project?.videoFile && (
+            <div className="flex-shrink-0 bg-[var(--rian-surface)] border-b border-[var(--rian-border)] p-4">
+              <VideoPlayer 
+                videoFile={project.videoFile}
+                onAudioExtracted={handleAudioExtracted}
+              />
             </div>
-            
-            <div className="p-4 space-y-3">
-              {/* Import Media */}
-              <div className="border-2 border-dashed border-gray-600 rounded-lg p-6 text-center hover:border-[var(--rian-accent)] transition-colors cursor-pointer">
-                <div className="text-2xl mb-2">⬆️</div>
-                <p className="text-sm text-gray-400">Import Media</p>
-              </div>
-              
-              {/* Add Audio Track */}
-              <button 
-                onClick={() => createTrackMutation.mutate({
-                  trackType: 'speaker',
-                  trackName: `Speaker ${speakerTracks.length + 1}`
-                })}
-                className="w-full bg-[var(--rian-elevated)] hover:bg-gray-600 rounded-lg p-3 text-center text-white transition-colors flex items-center justify-center space-x-2"
-              >
-                <span>🔗</span>
-                <span className="text-sm">Add Audio Track</span>
-              </button>
-            </div>
-            
-            {/* Voice Profiles Section */}
-            <div className="mt-auto p-4 border-t border-[var(--rian-border)]">
-              <h3 className="text-sm font-medium text-white mb-2 flex items-center">
-                👤 Voice Profiles
-              </h3>
-              <p className="text-xs text-gray-400">No voice profiles loaded</p>
-            </div>
-          </div>
-          
-          {/* Right Main Content Area */}
-          <div className="flex-1 flex flex-col max-w-full">
-            {/* Video Player - Completely Fixed, Never Affected by Zoom */}
-            {viewSettings.showVideo && (
-              <div className="flex-shrink-0 w-full max-w-full overflow-hidden bg-[var(--rian-surface)] border-b border-[var(--rian-border)]">
-                <div className="px-4 pt-4 pb-2">
-                  <VideoPlayer 
-                    videoFile={project?.videoFile}
-                    onAudioExtracted={handleAudioExtracted}
-                  />
-                </div>
-              </div>
-            )}
+          )}
 
-            {/* Timeline Area - Isolated Container */}
-            <div className="flex-1 overflow-hidden relative">
-              <div className="p-4 space-y-3">
-                {/* Timeline Ruler + All Waveforms */}
-                <div
-                  ref={timelineScrollRef}
-                  className="relative overflow-x-auto overflow-y-visible w-full"
-                  style={{ minHeight: 120, background: 'var(--rian-surface)' }}
-                  onScroll={handleTimelineScroll}
-                  onWheel={handleTimelineWheel}
-                >
-                  <TimelineRuler
-                    zoom={zoomLevel}
-                    duration={maxDuration}
-                    scrollLeft={scrollLeft}
-                    width={Math.max(maxDuration * zoomLevel, 2000)}
-                    currentTime={currentTime}
-                    onSnap={handleSnap}
-                  />
-                  <div style={{ width: Math.max(maxDuration * zoomLevel, 2000), minWidth: '100%' }}>
-                    {/* Source Audio Section */}
-                    {viewSettings.showAudio && sourceTrack && (
-                      <AudioTrack
-                        track={sourceTrack}
-                        onContextMenu={handleContextMenu}
-                        onPlay={() => {}}
-                        onStop={() => {}}
-                        onMute={() => {}}
-                        onFileUpload={(file) => handleTrackAudioUpload(file, sourceTrack)}
-                        waveformContainerId={`waveform-source-${sourceTrack.id}`}
-                        zoom={zoomLevel}
-                        duration={maxDuration}
-                        setZoom={setZoomLevel}
-                        currentTime={currentTime}
-                      />
-                    )}
-                    {/* Speaker Tracks Section */}
-                    {viewSettings.showAudio && (
-                      <TrackSection 
-                        title="Speaker Tracks" 
-                        icon="🗣️"
-                        defaultExpanded={true}
-                      >
-                        {speakerTracks.map((track: any, index: any) => (
-                          <SpeakerTrack
-                            key={track.id}
-                            track={track}
-                            voiceClones={voiceClones}
-                            onContextMenu={handleContextMenu}
-                            onPlay={() => {}}
-                            onStop={() => {}}
-                            onMute={() => {}}
-                            onSTSGenerate={() => handleSTSGeneration(track.id)}
-                            onNameEdit={() => handleSpeakerNameEdit(track.id, track.trackName)}
-                            onVoiceChange={(voiceCloneId) => updateTrackMutation.mutate({
-                              id: track.id,
-                              updates: { voiceClone: voiceCloneId.toString() }
-                            })}
-                            onFileUpload={(file) => handleTrackAudioUpload(file, track)}
-                            zoom={zoomLevel}
-                            duration={maxDuration}
-                            setZoom={setZoomLevel}
-                            currentTime={currentTime}
-                          />
-                        ))}
-                        <div className="rian-surface rounded-lg border rian-border p-4">
-                          <button
-                            onClick={() => createTrackMutation.mutate({
-                              trackType: 'speaker',
-                              trackName: `Speaker ${speakerTracks.length + 1}`
-                            })}
-                            className="w-full border-2 border-dashed rian-border rounded-lg p-6 text-center text-gray-500 hover:text-white hover:border-[var(--rian-accent)] transition-colors"
-                          >
-                            <div className="text-xl mb-2">➕</div>
-                            <p>Add Speaker Track</p>
-                          </button>
-                        </div>
-                      </TrackSection>
-                    )}
-
-                    {/* M&E Section */}
-                    {viewSettings.showME && (
-                      <TrackSection 
-                        title="M&E File" 
-                        icon="🎵"
-                        defaultExpanded={true}
-                        noExtraPadding={true}
-                      >
-                        <METrack
-                          track={meTrack}
-                          onContextMenu={handleContextMenu}
-                          onPlay={() => {}}
-                          onStop={() => {}}
-                          onMute={() => {}}
-                          onFileUpload={(file) => handleFileUpload(file, 'me', 'M&E File')}
-                        />
-                      </TrackSection>
-                    )}
+          {/* Professional Timeline Container */}
+          <div className="flex-1 flex flex-col p-4 overflow-hidden">
+            {/* Fixed Timeline Ruler - NEVER scrolls */}
+            <TimelineRuler
+              zoom={playheadState.zoom}
+              duration={playheadState.duration}
+              scrollLeft={playheadState.scrollLeft}
+              width={Math.max(playheadState.duration * playheadState.zoom, 1000)}
+              currentTime={playheadState.currentTime}
+              onSeek={playheadActions.seekTo}
+            />
+            
+            {/* Scrollable Timeline Content */}
+            <ScrollableTimeline
+              zoom={playheadState.zoom}
+              currentTime={playheadState.currentTime}
+              duration={playheadState.duration}
+              scrollLeft={playheadState.scrollLeft}
+              onScrollChange={playheadActions.setScrollLeft}
+              onTimelineClick={playheadActions.seekTo}
+              className="bg-[var(--rian-surface)] flex-1"
+            >
+              {/* Audio Tracks */}
+              <div className="space-y-2">
+                {/* Source Audio Track */}
+                {sourceTrack && (
+                  <div className="bg-[var(--rian-elevated)] rounded-lg p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-white">Source Audio</h3>
+                    </div>
+                    <EnhancedWaveform
+                      trackId={`source-${sourceTrack.id}`}
+                      audioUrl={sourceTrack.audioFile ? `/uploads/${sourceTrack.audioFile}` : undefined}
+                      waveformData={Array.isArray(sourceTrack.waveformData) ? sourceTrack.waveformData : undefined}
+                      isActive={!!sourceTrack.audioFile}
+                      height={80}
+                      zoom={playheadState.zoom}
+                      currentTime={playheadState.currentTime}
+                      duration={playheadState.duration}
+                      scrollLeft={playheadState.scrollLeft}
+                      onDurationChange={playheadActions.setDuration}
+                      onTimeUpdate={playheadActions.setCurrentTime}
+                      onPlay={playheadActions.play}
+                      onPause={playheadActions.pause}
+                      waveColor="#60a5fa"
+                      progressColor="#2563eb"
+                    />
                   </div>
-                </div>
+                )}
+                
+                {/* Speaker Tracks */}
+                {speakerTracks.map((track, index) => (
+                  <div key={track.id} className="bg-[var(--rian-elevated)] rounded-lg p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-white">{track.trackName}</h3>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => handleSpeakerNameEdit(track.id, track.trackName)}
+                          className="text-xs text-blue-400 hover:text-blue-300"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleSTSGeneration(track.id)}
+                          className="text-xs text-green-400 hover:text-green-300"
+                        >
+                          Generate
+                        </button>
+                      </div>
+                    </div>
+                    <EnhancedWaveform
+                      trackId={`speaker-${track.id}`}
+                      audioUrl={track.audioFile ? `/uploads/${track.audioFile}` : undefined}
+                      isActive={!!track.audioFile}
+                      height={80}
+                      zoom={playheadState.zoom}
+                      currentTime={playheadState.currentTime}
+                      duration={playheadState.duration}
+                      scrollLeft={playheadState.scrollLeft}
+                      onDurationChange={playheadActions.setDuration}
+                      waveColor="#10b981"
+                      progressColor="#059669"
+                    />
+                  </div>
+                ))}
+                
+                {/* M&E Track */}
+                {meTrack && (
+                  <div className="bg-[var(--rian-elevated)] rounded-lg p-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="text-sm font-medium text-white">M&E File</h3>
+                    </div>
+                    <EnhancedWaveform
+                      trackId={`me-${meTrack.id}`}
+                      audioUrl={meTrack.audioFile ? `/uploads/${meTrack.audioFile}` : undefined}
+                      isActive={!!meTrack.audioFile}
+                      height={60}
+                      zoom={playheadState.zoom}
+                      currentTime={playheadState.currentTime}
+                      duration={playheadState.duration}
+                      scrollLeft={playheadState.scrollLeft}
+                      onDurationChange={playheadActions.setDuration}
+                      waveColor="#f59e0b"
+                      progressColor="#d97706"
+                    />
+                  </div>
+                )}
               </div>
-            </div>
+            </ScrollableTimeline>
           </div>
         </div>
-// ... (rest of the code remains the same)
+      </div>
 
+      {/* Modals and Context Menus */}
       <ContextMenu
-        // ... (rest of the code remains the same)
+        visible={contextMenu.visible}
         x={contextMenu.x}
         y={contextMenu.y}
         onClose={() => setContextMenu({ visible: false, x: 0, y: 0 })}
@@ -590,8 +668,8 @@ export default function STSEditor() {
           setEditSpeakerModal({ visible: false });
         }}
       />
-      </div>
 
+      {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"

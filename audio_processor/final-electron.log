@@ -1,0 +1,40 @@
+
+> rest-express@1.0.0 electron
+> electron electron-main.cjs
+
+Starting Electron app...
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development PORT=5001 tsx server/index.ts
+
+⚠️ ELEVENLABS_API_KEY not found in environment variables
+🦀 [Rust Audio] Service available: true
+node:events:485
+      throw er; // Unhandled 'error' event
+      ^
+
+Error: listen EADDRINUSE: address already in use 0.0.0.0:5001
+    at Server.setupListenHandle [as _listen2] (node:net:1939:16)
+    at listenInCluster (node:net:1996:12)
+    at node:net:2205:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+Emitted 'error' event on Server instance at:
+    at emitErrorNT (node:net:1975:8)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21) {
+  code: 'EADDRINUSE',
+  errno: -48,
+  syscall: 'listen',
+  address: '0.0.0.0',
+  port: 5001
+}
+
+Node.js v23.11.0
+Creating window...
+Window displayed successfully
+2025-08-06 15:37:30.556 Electron[12425:1946361] +[IMKClient subclass]: chose IMKClient_Legacy
+2025-08-06 15:37:30.556 Electron[12425:1946361] +[IMKInputSession subclass]: chose IMKInputSession_Legacy
+sysctlbyname for kern.hv_vmm_present failed with status -1[12425:0806/154212.451642:ERROR:content/browser/network_service_instance_impl.cc:597] Network service crashed, restarting service.
+[12425:0806/154212.456081:ERROR:content/browser/gpu/gpu_process_host.cc:957] GPU process exited unexpectedly: exit_code=15
+/Users/manishshinde/Rian-Audio-Editor2/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron exited with signal SIGTERM
+[13251:0806/154212.668359:ERROR:base/apple/mach_port_rendezvous_mac.cc:255] bootstrap_look_up com.github.Electron.MachPortRendezvousServer.1: Permission denied (1100)
+[13251:0806/154212.668510:ERROR:base/memory/shared_memory_switch.cc:266] No rendezvous client, terminating process (parent died?)

@@ -1,0 +1,18 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Audio waveform design -->
+  <rect width="32" height="32" rx="6" fill="#1f2937"/>
+  
+  <!-- Waveform bars -->
+  <rect x="4" y="20" width="2" height="4" fill="#60a5fa"/>
+  <rect x="7" y="16" width="2" height="8" fill="#60a5fa"/>
+  <rect x="10" y="12" width="2" height="12" fill="#60a5fa"/>
+  <rect x="13" y="8" width="2" height="16" fill="#60a5fa"/>
+  <rect x="16" y="6" width="2" height="20" fill="#3b82f6"/>
+  <rect x="19" y="10" width="2" height="12" fill="#60a5fa"/>
+  <rect x="22" y="14" width="2" height="8" fill="#60a5fa"/>
+  <rect x="25" y="18" width="2" height="6" fill="#60a5fa"/>
+  <rect x="28" y="22" width="2" height="2" fill="#60a5fa"/>
+  
+  <!-- Play button overlay -->
+  <polygon points="10,10 10,22 22,16" fill="#ffffff" fill-opacity="0.9"/>
+</svg>

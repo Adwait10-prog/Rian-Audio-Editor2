@@ -1,0 +1,585 @@
+
+> rest-express@1.0.0 dev:server
+> NODE_ENV=development PORT=5001 tsx server/index.ts
+
+⚠️ ELEVENLABS_API_KEY not found in environment variables
+3:37:15 PM [express] serving on port 5001
+3:37:15 PM [express] available at: https://undefined.undefined.repl.co
+🦀 [Rust Audio] Service available: true
+Browserslist: browsers data (caniuse-lite) is 10 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+3:37:30 PM [express] GET /api/projects 200 in 3ms :: [{"name":"Sample STS Project","clientName":"Dem…
+Upload request received
+Request file: {
+  fieldname: 'file',
+  originalname: 'WhatsApp Video 2025-07-29 at 5.02.47 PM (1).mp4',
+  encoding: '7bit',
+  mimetype: 'video/mp4',
+  destination: 'uploads/',
+  filename: 'c0271263fd3e42bea924eed527a2d47d',
+  path: 'uploads/c0271263fd3e42bea924eed527a2d47d',
+  size: 17053025
+}
+Request headers: {
+  host: 'localhost:5001',
+  connection: 'keep-alive',
+  'content-length': '17053245',
+  'sec-ch-ua-platform': '"macOS"',
+  'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.7204.168 Electron/37.2.5 Safari/537.36',
+  'sec-ch-ua': '"Not)A;Brand";v="8", "Chromium";v="138"',
+  'content-type': 'multipart/form-data; boundary=----WebKitFormBoundaryL4CRI0ZlGJef28RU',
+  'sec-ch-ua-mobile': '?0',
+  accept: '*/*',
+  origin: 'http://localhost:5001',
+  'sec-fetch-site': 'same-origin',
+  'sec-fetch-mode': 'cors',
+  'sec-fetch-dest': 'empty',
+  referer: 'http://localhost:5001/',
+  'accept-encoding': 'gzip, deflate, br, zstd',
+  'accept-language': 'en-US'
+}
+File uploaded successfully: WhatsApp Video 2025-07-29 at 5.02.47 PM (1).mp4 (17053025 bytes)
+Upload response: {
+  success: true,
+  filename: 'c0271263fd3e42bea924eed527a2d47d',
+  originalName: 'WhatsApp Video 2025-07-29 at 5.02.47 PM (1).mp4',
+  size: 17053025,
+  url: '/uploads/c0271263fd3e42bea924eed527a2d47d',
+  filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d',
+  mimetype: 'video/mp4'
+}
+3:37:40 PM [express] POST /api/upload 200 in 35ms :: {"success":true,"filename":"c0271263fd3e42bea92…
+3:37:40 PM [express] PUT /api/projects/1 200 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+3:37:40 PM [express] GET /api/projects 200 in 0ms :: [{"name":"Sample STS Project","clientName":"Dem…
+3:37:42 PM [express] GET /api/projects/1 200 in 1ms :: {"name":"Sample STS Project","clientName":"De…
+3:37:42 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:37:42 PM [express] GET /api/voice-clones 304 in 1ms :: [{"name":"Rachel - Professional Female","de…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474862531.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474862531.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474862531.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x12df421e0] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.73e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474862531.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474862531.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:37:43 PM [express] POST /api/extract-audio 200 in 663ms :: {"success":true,"audioFile":"c0271263fd…
+3:37:43 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:37:43 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:38:05 PM [express] GET /api/projects/1/tracks 200 in 2ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:38:12 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:38:47 PM [express] GET /api/voice-clones 304 in 7ms :: [{"name":"Rachel - Professional Female","de…
+3:38:47 PM [express] GET /api/projects/1 200 in 1ms :: {"name":"Sample STS Project","clientName":"De…
+3:38:47 PM [express] GET /api/projects/1/tracks 200 in 3ms :: [{"id":1,"projectId":1,"trackType":"so…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474927752.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474927752.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474927752.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x15b7072f0] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.57e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474927752.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474927752.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:38:48 PM [express] POST /api/extract-audio 200 in 414ms :: {"success":true,"audioFile":"c0271263fd…
+3:38:48 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:38:51 PM [express] GET /api/projects/1/tracks 200 in 4ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:38:51 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+3:38:51 PM [express] GET /api/projects/1 304 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474932248.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474932248.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474932248.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x14cf09100] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.68e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474932248.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474932248.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:38:52 PM [express] POST /api/extract-audio 200 in 242ms :: {"success":true,"audioFile":"c0271263fd…
+3:38:52 PM [express] PUT /api/tracks/1 200 in 2ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:38:59 PM [express] GET /api/projects/1/tracks 200 in 7ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:38:59 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+3:38:59 PM [express] GET /api/projects/1 304 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474940190.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474940190.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474940190.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x152e0bdb0] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.35e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474940190.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474940190.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:39:00 PM [express] POST /api/extract-audio 200 in 274ms :: {"success":true,"audioFile":"c0271263fd…
+3:39:00 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:39:57 PM [vite] hmr update /src/components/sts/enhanced-waveform.tsx, /src/index.css?v=1rIZbqz1OaDhhHJf4mDEU
+3:39:57 PM [express] GET /api/projects/1/tracks 200 in 2ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:39:57 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+3:39:57 PM [express] GET /api/projects/1 304 in 1ms :: {"name":"Sample STS Project","clientName":"De…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474997664.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474997664.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474997664.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x11f71ae20] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed= 936x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474997664.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474997664.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:39:58 PM [express] POST /api/extract-audio 200 in 499ms :: {"success":true,"audioFile":"c0271263fd…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474998172.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474998172.wav"
+3:39:58 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:39:58 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474998172.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x14f706ef0] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.59e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474998172.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754474998172.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:39:58 PM [express] POST /api/extract-audio 200 in 169ms :: {"success":true,"audioFile":"c0271263fd…
+3:39:58 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:39:58 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:40:12 PM [vite] hmr update /src/components/sts/enhanced-waveform.tsx, /src/index.css?v=1rIZbqz1OaDhhHJf4mDEU
+3:40:13 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+3:40:13 PM [express] GET /api/projects/1/tracks 200 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:40:13 PM [express] GET /api/projects/1 304 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475013421.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475013421.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475013421.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x130105300] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.31e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475013421.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475013421.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:40:13 PM [express] POST /api/extract-audio 200 in 282ms :: {"success":true,"audioFile":"c0271263fd…
+3:40:13 PM [express] PUT /api/tracks/1 200 in 3ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:40:13 PM [express] GET /api/projects/1/tracks 200 in 2ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:40:36 PM [vite] hmr update /src/components/sts/enhanced-waveform.tsx, /src/index.css?v=1rIZbqz1OaDhhHJf4mDEU
+3:40:36 PM [express] GET /api/projects/1/tracks 304 in 1ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:40:36 PM [express] GET /api/projects/1 304 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+3:40:36 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475036641.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475036641.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475036641.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x1502040b0] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.32e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475036641.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475036641.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:40:36 PM [express] POST /api/extract-audio 200 in 281ms :: {"success":true,"audioFile":"c0271263fd…
+3:40:36 PM [express] PUT /api/tracks/1 200 in 2ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:40:36 PM [express] GET /api/projects/1/tracks 200 in 2ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:40:49 PM [vite] hmr update /src/components/sts/enhanced-waveform.tsx, /src/index.css?v=1rIZbqz1OaDhhHJf4mDEU
+3:41:12 PM [express] GET /api/projects/1/tracks 304 in 4ms :: [{"id":1,"projectId":1,"trackType":"so…
+3:41:12 PM [express] GET /api/voice-clones 304 in 0ms :: [{"name":"Rachel - Professional Female","de…
+3:41:12 PM [express] GET /api/projects/1 304 in 0ms :: {"name":"Sample STS Project","clientName":"De…
+🎵 [Audio Extraction] Starting extraction...
+🎵 [Audio Extraction] req.file: undefined
+🎵 [Audio Extraction] req.body: { filePath: 'uploads/c0271263fd3e42bea924eed527a2d47d' }
+🎵 [Audio Extraction] Using provided path: uploads/c0271263fd3e42bea924eed527a2d47d → /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d
+🎵 [Audio Extraction] Input file exists: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d (17053025 bytes)
+🎵 [Audio Extraction] Output path: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475072494.wav
+🎵 [Audio Extraction] Running FFmpeg command: ffmpeg -y -i "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d" -vn -acodec pcm_s16le -ar 44100 -ac 2 -t 300 "/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475072494.wav"
+🎵 [Audio Extraction] FFmpeg stdout: 
+🎵 [Audio Extraction] FFmpeg stderr (normal): ffmpeg version 7.1.1 Copyright (c) 2000-2025 the FFmpeg developers
+  built with Apple clang version 16.0.0 (clang-1600.0.26.6)
+  configuration: --prefix=/opt/homebrew/Cellar/ffmpeg/7.1.1_2 --enable-shared --enable-pthreads --enable-version3 --cc=clang --host-cflags= --host-ldflags='-Wl,-ld_classic' --enable-ffplay --enable-gnutls --enable-gpl --enable-libaom --enable-libaribb24 --enable-libbluray --enable-libdav1d --enable-libharfbuzz --enable-libjxl --enable-libmp3lame --enable-libopus --enable-librav1e --enable-librist --enable-librubberband --enable-libsnappy --enable-libsrt --enable-libssh --enable-libsvtav1 --enable-libtesseract --enable-libtheora --enable-libvidstab --enable-libvmaf --enable-libvorbis --enable-libvpx --enable-libwebp --enable-libx264 --enable-libx265 --enable-libxml2 --enable-libxvid --enable-lzma --enable-libfontconfig --enable-libfreetype --enable-frei0r --enable-libass --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libopenjpeg --enable-libspeex --enable-libsoxr --enable-libzmq --enable-libzimg --disable-libjack --disable-indev=jack --enable-videotoolbox --enable-audiotoolbox --enable-neon
+  libavutil      59. 39.100 / 59. 39.100
+  libavcodec     61. 19.101 / 61. 19.101
+  libavformat    61.  7.100 / 61.  7.100
+  libavdevice    61.  3.100 / 61.  3.100
+  libavfilter    10.  4.100 / 10.  4.100
+  libswscale      8.  3.100 /  8.  3.100
+  libswresample   5.  3.100 /  5.  3.100
+  libpostproc    58.  3.100 / 58.  3.100
+Input #0, mov,mp4,m4a,3gp,3g2,mj2, from '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+  Duration: 00:01:32.25, start: 0.000000, bitrate: 1478 kb/s
+  Stream #0:0[0x1](und): Video: h264 (Baseline) (avc1 / 0x31637661), yuv420p(tv, bt709, progressive), 848x480, 1413 kb/s, 25 fps, 25 tbr, 600 tbn (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+  Stream #0:1[0x2](und): Audio: aac (LC) (mp4a / 0x6134706D), 44100 Hz, stereo, fltp, 63 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+Stream mapping:
+  Stream #0:1 -> #0:0 (aac (native) -> pcm_s16le (native))
+Press [q] to stop, [?] for help
+Output #0, wav, to '/Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475072494.wav':
+  Metadata:
+    major_brand     : mp42
+    minor_version   : 0
+    compatible_brands: mp42isom
+    ISFT            : Lavf61.7.100
+  Stream #0:0(und): Audio: pcm_s16le ([1][0][0][0] / 0x0001), 44100 Hz, stereo, s16, 1411 kb/s (default)
+      Metadata:
+        vendor_id       : [0][0][0][0]
+        encoder         : Lavc61.19.101 pcm_s16le
+[out#0/wav @ 0x14c841800] video:0KiB audio:15892KiB subtitle:0KiB other streams:0KiB global headers:0KiB muxing overhead: 0.000479%
+size=   15892KiB time=00:01:32.25 bitrate=1411.2kbits/s speed=1.11e+03x    
+
+🎵 [Audio Extraction] Extracted audio file: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475072494.wav (16273486 bytes)
+🦀 [Audio Extraction] Using Rust processor for waveform generation...
+🦀 [Rust Audio] Processing audio: /Users/manishshinde/Rian-Audio-Editor2/uploads/c0271263fd3e42bea924eed527a2d47d_audio_1754475072494.wav
+🦀 [Rust Audio] Processed successfully: 10595 peaks, 92.25287981859411s duration
+🦀 [Audio Extraction] Rust processor generated 10595 peaks
+✅ [Audio Extraction] Success! Generated 10595 waveform points
+3:41:12 PM [express] POST /api/extract-audio 200 in 357ms :: {"success":true,"audioFile":"c0271263fd…
+3:41:12 PM [express] PUT /api/tracks/1 200 in 1ms :: {"id":1,"projectId":1,"trackType":"source","tra…
+3:41:12 PM [express] GET /api/projects/1/tracks 200 in 2ms :: [{"id":1,"projectId":1,"trackType":"so…

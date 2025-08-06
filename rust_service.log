@@ -1,0 +1,2 @@
+Starting audio processor server on 0.0.0.0:8081
+[2025-08-06T10:08:48Z ERROR actix_http::h1::dispatcher] stream error: request parse error: invalid Header provided
