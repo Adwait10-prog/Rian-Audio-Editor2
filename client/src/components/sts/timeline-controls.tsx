@@ -10,7 +10,7 @@ interface TimelineControlsProps {
 
 export default function TimelineControls({ onZoomIn, onZoomOut, onSplit, zoomLevel }: TimelineControlsProps) {
   return (
-    <div className="flex items-center gap-2 p-2 bg-[var(--rian-surface)] border-b border-[var(--rian-border)] sticky top-0 z-20">
+    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--rian-surface)] border-b border-[var(--rian-border)] sticky top-0 z-20">
       <Button size="sm" onClick={onZoomIn} title="Zoom In">
         <ZoomIn className="w-4 h-4" />
       </Button>

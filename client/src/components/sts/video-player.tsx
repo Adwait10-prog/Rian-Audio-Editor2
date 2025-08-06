@@ -1,13 +1,22 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Square, Volume2, Maximize } from "lucide-react";
 
 interface VideoPlayerProps {
   videoFile?: string;
   onAudioExtracted?: (audioUrl: string, waveformData: number[]) => void;
+  globalPlaybackTime?: number;
+  onPlaybackTimeUpdate?: (time: number) => void;
+  onPlayStateChange?: (isPlaying: boolean) => void;
 }
 
-export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayerProps) {
+export default function VideoPlayer({ 
+  videoFile, 
+  onAudioExtracted, 
+  globalPlaybackTime, 
+  onPlaybackTimeUpdate, 
+  onPlayStateChange 
+}: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -47,11 +56,21 @@ export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayer
     setCurrentTime(0);
   };
 
-  const handleTimeUpdate = () => {
+  const handleTimeUpdate = useCallback(() => {
     const video = videoRef.current;
     if (!video) return;
-    setCurrentTime(Math.floor(video.currentTime));
-  };
+    const time = video.currentTime;
+    setCurrentTime(Math.floor(time));
+    
+    // Throttle updates more aggressively for better performance
+    const now = performance.now();
+    if (onPlaybackTimeUpdate && now - lastUpdateTime.current > 16) { // ~60fps max
+      onPlaybackTimeUpdate(time);
+      lastUpdateTime.current = now;
+    }
+  }, [onPlaybackTimeUpdate]);
+  
+  const lastUpdateTime = useRef(0);
 
   const handleLoadedMetadata = () => {
     const video = videoRef.current;
@@ -114,22 +133,32 @@ export default function VideoPlayer({ videoFile, onAudioExtracted }: VideoPlayer
   const progressPercentage = (currentTime / duration) * 100;
 
   return (
-    <div className="rian-surface border-b rian-border" style={{ height: "300px" }}>
-      <div className="h-full p-4">
-        <div className="bg-black rounded-lg h-full relative overflow-hidden">
+    <div className="w-full h-full">
+      <div className="h-full p-2">
+        <div className="bg-gray-900 rounded-lg h-full relative overflow-hidden">
           {videoFile ? (
             <video
-              key={videoFile} // Force re-mount when videoFile changes
+              key={videoFile}
               ref={videoRef}
-              className="w-full h-full object-contain"
+              className="w-full h-full object-cover"
+              style={{ 
+                willChange: 'transform',
+                transform: 'translateZ(0)' // Force hardware acceleration
+              }}
               src={videoFile.startsWith('http') || videoFile.startsWith('/') ? videoFile : `/uploads/${videoFile}`}
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
-              onPlay={() => setIsPlaying(true)}
-              onPause={() => setIsPlaying(false)}
+              onPlay={() => {
+                setIsPlaying(true);
+                onPlayStateChange?.(true);
+              }}
+              onPause={() => {
+                setIsPlaying(false);
+                onPlayStateChange?.(false);
+              }}
               onError={handleVideoError}
-              onCanPlay={() => console.log('Video can play')}
-              onLoadStart={() => console.log('Video load started')}
+              preload="auto"
+              playsInline
             />
           ) : (
             <div className="w-full h-full bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center">

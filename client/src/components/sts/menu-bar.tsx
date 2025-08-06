@@ -23,6 +23,7 @@ interface MenuBarProps {
     showME: boolean;
   };
   onViewSettingsChange: (settings: any) => void;
+  customLogo?: React.ReactNode;
 }
 
 export default function MenuBar({
@@ -33,7 +34,8 @@ export default function MenuBar({
   onVideoUpload,
   onNavigateToProjects,
   viewSettings,
-  onViewSettingsChange
+  onViewSettingsChange,
+  customLogo
 }: MenuBarProps) {
   const [autoSave, setAutoSave] = useState(true);
 
@@ -65,15 +67,17 @@ export default function MenuBar({
 
   return (
     <div className="rian-surface border-b rian-border">
-      <div className="flex items-center justify-between px-4 py-2">
+      <div className="flex items-center justify-between px-4 py-1">
         <div className="flex items-center space-x-6">
-          <div 
-            className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity"
-            onClick={onNavigateToProjects}
-          >
-            <div className="w-6 h-6 bg-[var(--rian-accent)] rounded flex items-center justify-center">
-              <div className="w-3 h-3 border-2 border-white rounded-sm"></div>
-            </div>
+          <div className="flex items-center space-x-2 cursor-pointer hover:opacity-80 transition-opacity" onClick={onNavigateToProjects}>
+            {/* Custom Logo Support */}
+            {customLogo ? (
+              <span className="w-7 h-7 flex items-center justify-center mr-1">{customLogo}</span>
+            ) : (
+              <div className="w-6 h-6 bg-[var(--rian-accent)] rounded flex items-center justify-center">
+                <div className="w-3 h-3 border-2 border-white rounded-sm"></div>
+              </div>
+            )}
             <span className="font-semibold text-lg">RIAN STS Editor</span>
           </div>
 
@@ -204,24 +208,24 @@ export default function MenuBar({
         </div>
 
         {/* Global Controls */}
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-2">
           <Button
             onClick={onPlayAll}
-            className={`px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors ${
+            className={`px-2 py-1 h-8 min-w-0 text-xs rounded flex items-center space-x-1 transition-colors ${
               isPlaying 
                 ? 'bg-[var(--rian-warning)] hover:bg-yellow-600' 
                 : 'bg-[var(--rian-success)] hover:bg-green-600'
             }`}
           >
-            {isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-            <span>{isPlaying ? 'Pause All' : 'Play All'}</span>
+            {isPlaying ? <Square className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+            <span className="hidden sm:inline">{isPlaying ? 'Pause All' : 'Play All'}</span>
           </Button>
           <Button
             onClick={onStopAll}
-            className="bg-[var(--rian-danger)] hover:bg-red-600 px-4 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+            className="bg-[var(--rian-danger)] hover:bg-red-600 px-2 py-1 h-8 min-w-0 text-xs rounded flex items-center space-x-1 transition-colors"
           >
-            <Square className="w-4 h-4" />
-            <span>Stop All</span>
+            <Square className="w-3 h-3" />
+            <span className="hidden sm:inline">Stop All</span>
           </Button>
         </div>
       </div>
