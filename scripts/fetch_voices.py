@@ -6,7 +6,7 @@ import os
 
 def fetch_voices():
     """Fetch voices from ElevenLabs API"""
-    api_key = os.environ.get('ELEVENLABS_API_KEY', 'sk_a6d6b1da1f11871027eafac43784fb5728ac04414e1bb800')
+    api_key = os.environ.get('ELEVENLABS_API_KEY', '1234')
     
     try:
         response = requests.get(
