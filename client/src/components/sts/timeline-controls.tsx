@@ -14,7 +14,7 @@ export default function TimelineControls({ onZoomIn, onZoomOut, onSplit, zoomLev
       <Button size="sm" onClick={onZoomIn} title="Zoom In">
         <ZoomIn className="w-4 h-4" />
       </Button>
-      <Button size="sm" onClick={onZoomOut} title="Zoom Out" disabled={zoomLevel <= 1}>
+      <Button size="sm" onClick={onZoomOut} title="Zoom Out" disabled={zoomLevel <= 10}>
         <ZoomOut className="w-4 h-4" />
       </Button>
       <span className="text-xs text-gray-400 px-2">Zoom: {zoomLevel.toFixed(2)}x</span>

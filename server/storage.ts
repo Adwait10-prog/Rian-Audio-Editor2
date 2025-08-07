@@ -94,6 +94,9 @@ export class MemStorage implements IStorage {
       trackType: "source",
       trackName: "Source Audio",
       audioFile: null,
+      originalFileName: null,
+      fileSize: null,
+      duration: null,
       voiceClone: null,
       isProcessed: false,
       waveformData: null
@@ -105,6 +108,9 @@ export class MemStorage implements IStorage {
       trackType: "speaker",
       trackName: "Speaker 1",
       audioFile: null,
+      originalFileName: null,
+      fileSize: null,
+      duration: null,
       voiceClone: null,
       isProcessed: false,
       waveformData: null
@@ -115,6 +121,9 @@ export class MemStorage implements IStorage {
       trackType: "speaker",
       trackName: "Speaker 2",
       audioFile: null,
+      originalFileName: null,
+      fileSize: null,
+      duration: null,
       voiceClone: null,
       isProcessed: false,
       waveformData: null
@@ -123,11 +132,15 @@ export class MemStorage implements IStorage {
 
   async createProject(insertProject: InsertProject): Promise<Project> {
     const id = this.currentProjectId++;
+    const now = new Date().toISOString();
     const project: Project = {
       ...insertProject,
       id,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
       videoFile: insertProject.videoFile || null,
+      sourceAudioFile: insertProject.sourceAudioFile || null,
+      videoDuration: insertProject.videoDuration || null,
     };
     this.projects.set(id, project);
     return project;
@@ -145,7 +158,11 @@ export class MemStorage implements IStorage {
     const existingProject = this.projects.get(id);
     if (!existingProject) return undefined;
 
-    const updatedProject = { ...existingProject, ...updates };
+    const updatedProject = { 
+      ...existingProject, 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
     this.projects.set(id, updatedProject);
     return updatedProject;
   }
@@ -165,10 +182,16 @@ export class MemStorage implements IStorage {
 
   async createAudioTrack(insertTrack: InsertAudioTrack): Promise<AudioTrack> {
     const id = this.currentAudioTrackId++;
+    const now = new Date().toISOString();
     const track: AudioTrack = {
       ...insertTrack,
       id,
+      createdAt: now,
+      updatedAt: now,
       audioFile: insertTrack.audioFile || null,
+      originalFileName: insertTrack.originalFileName || null,
+      fileSize: insertTrack.fileSize || null,
+      duration: insertTrack.duration || null,
       voiceClone: insertTrack.voiceClone || null,
       isProcessed: insertTrack.isProcessed || false,
       waveformData: insertTrack.waveformData || null,
@@ -185,7 +208,11 @@ export class MemStorage implements IStorage {
     const existingTrack = this.audioTracks.get(id);
     if (!existingTrack) return undefined;
 
-    const updatedTrack = { ...existingTrack, ...updates };
+    const updatedTrack = { 
+      ...existingTrack, 
+      ...updates, 
+      updatedAt: new Date().toISOString() 
+    };
     this.audioTracks.set(id, updatedTrack);
     return updatedTrack;
   }

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Square, Volume2, Maximize } from "lucide-react";
+import { Play, Pause, Square, Volume2, Volume1, VolumeX, Maximize } from "lucide-react";
 
 interface VideoPlayerProps {
   videoFile?: string;
+  projectId?: number;
   onAudioExtracted?: (audioUrl: string, waveformData: number[]) => void;
   globalPlaybackTime?: number;
   onPlaybackTimeUpdate?: (time: number) => void;
@@ -12,6 +13,7 @@ interface VideoPlayerProps {
 
 export default function VideoPlayer({ 
   videoFile, 
+  projectId,
   onAudioExtracted, 
   globalPlaybackTime, 
   onPlaybackTimeUpdate, 
@@ -76,6 +78,8 @@ export default function VideoPlayer({
     const video = videoRef.current;
     if (!video) return;
     setDuration(Math.floor(video.duration));
+    // Sync video volume with state
+    video.volume = volume / 100;
   };
 
   const handleProgressClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -91,20 +95,89 @@ export default function VideoPlayer({
     setCurrentTime(Math.floor(newTime));
   };
 
+  const handleVolumeClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const volumePercent = (clickX / rect.width) * 100;
+    const newVolume = Math.max(0, Math.min(100, volumePercent));
+    
+    setVolume(newVolume);
+    const video = videoRef.current;
+    if (video) {
+      video.volume = newVolume / 100;
+    }
+  };
+
+  const handleVolumeToggle = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (volume === 0) {
+      setVolume(60);
+      video.volume = 0.6;
+    } else {
+      setVolume(0);
+      video.volume = 0;
+    }
+  };
+
+  const handleFullscreen = () => {
+    const video = videoRef.current;
+    if (!video) return;
+    
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      video.requestFullscreen?.();
+    }
+  };
+
   const extractAudioFromVideo = async () => {
     if (!videoFile) return;
     
     setIsLoading(true);
     try {
-      const response = await fetch('/api/extract-audio', {
+      // Handle both cases: videoFile might already contain path or just filename
+      // Check if it already has the project folder structure
+      let filePath;
+      if (videoFile.startsWith('uploads/')) {
+        // Already has full path
+        filePath = videoFile;
+      } else if (videoFile.includes('project-')) {
+        // Has project folder but missing uploads/ prefix
+        filePath = `uploads/${videoFile}`;
+      } else {
+        // Just filename
+        filePath = `uploads/${videoFile}`;
+      }
+      
+      console.log('VideoPlayer: videoFile =', videoFile);
+      console.log('VideoPlayer: constructed filePath =', filePath);
+      
+      // Use project-specific endpoint if projectId is provided
+      const endpoint = projectId 
+        ? `/api/projects/${projectId}/extract-audio`
+        : '/api/extract-audio';
+      
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ videoFile })
+        body: JSON.stringify({ filePath })
       });
       
       const result = await response.json();
-      if (result.success) {
-        onAudioExtracted?.(result.audioUrl, result.waveformData);
+      console.log('Audio extraction result:', result);
+      
+      // Check for success in multiple ways:
+      // 1. Explicit success field
+      // 2. Response was ok AND has audioFile/audioUrl
+      if (result.success || (response.ok && (result.audioFile || result.audioUrl))) {
+        // Handle both old format (audioUrl) and new format (audioFile)
+        const audioPath = result.audioFile || result.audioUrl;
+        console.log('Calling onAudioExtracted with audioPath:', audioPath);
+        onAudioExtracted?.(audioPath, result.waveformData);
+      } else {
+        console.error('Audio extraction failed - no success field and no audio file returned');
       }
     } catch (error) {
       console.error('Audio extraction failed:', error);
@@ -116,7 +189,12 @@ export default function VideoPlayer({
   useEffect(() => {
     console.log('Video file changed:', videoFile);
     if (videoFile) {
-      const videoSrc = videoFile.startsWith('http') || videoFile.startsWith('/') ? videoFile : `/uploads/${videoFile}`;
+      // Handle project-specific paths
+      const videoSrc = videoFile.startsWith('http') || videoFile.startsWith('/') 
+        ? videoFile 
+        : videoFile.includes('project-')
+          ? `/uploads/${videoFile}`
+          : `/uploads/${videoFile}`;
       console.log('Video source URL:', videoSrc);
       extractAudioFromVideo();
     }
@@ -145,7 +223,13 @@ export default function VideoPlayer({
                 willChange: 'transform',
                 transform: 'translateZ(0)' // Force hardware acceleration
               }}
-              src={videoFile.startsWith('http') || videoFile.startsWith('/') ? videoFile : `/uploads/${videoFile}`}
+              src={
+                videoFile.startsWith('http') || videoFile.startsWith('/') 
+                  ? videoFile 
+                  : videoFile.includes('project-')
+                    ? `/uploads/${videoFile}`
+                    : `/uploads/${videoFile}`
+              }
               onTimeUpdate={handleTimeUpdate}
               onLoadedMetadata={handleLoadedMetadata}
               onPlay={() => {
@@ -207,14 +291,31 @@ export default function VideoPlayer({
               </div>
 
               <div className="flex items-center space-x-3">
-                <Volume2 className="text-white w-4 h-4" />
-                <div className="w-20 bg-white bg-opacity-20 rounded-full h-2 relative">
+                <button 
+                  onClick={handleVolumeToggle}
+                  className="text-white hover:text-blue-400 transition-colors"
+                >
+                  {volume === 0 ? (
+                    <VolumeX className="w-4 h-4" />
+                  ) : volume < 50 ? (
+                    <Volume1 className="w-4 h-4" />
+                  ) : (
+                    <Volume2 className="w-4 h-4" />
+                  )}
+                </button>
+                <div 
+                  className="w-20 bg-white bg-opacity-20 rounded-full h-2 relative cursor-pointer"
+                  onClick={handleVolumeClick}
+                >
                   <div 
                     className="bg-white rounded-full h-2 transition-all"
                     style={{ width: `${volume}%` }}
                   />
                 </div>
-                <Button className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded p-2">
+                <Button 
+                  onClick={handleFullscreen}
+                  className="bg-white bg-opacity-20 hover:bg-opacity-30 rounded p-2"
+                >
                   <Maximize className="text-white w-4 h-4" />
                 </Button>
               </div>

@@ -8,7 +8,10 @@ export const projects = pgTable("projects", {
   clientName: text("client_name").notNull(),
   languagePair: text("language_pair").notNull(),
   videoFile: text("video_file"),
+  sourceAudioFile: text("source_audio_file"),
+  videoDuration: integer("video_duration"), // Duration in seconds
   createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 export const audioTracks = pgTable("audio_tracks", {
@@ -17,9 +20,14 @@ export const audioTracks = pgTable("audio_tracks", {
   trackType: text("track_type").notNull(), // 'source', 'speaker', 'me'
   trackName: text("track_name").notNull(),
   audioFile: text("audio_file"),
+  originalFileName: text("original_file_name"),
+  fileSize: integer("file_size"),
+  duration: integer("duration"), // Duration in seconds
   voiceClone: text("voice_clone"),
   isProcessed: boolean("is_processed").default(false),
   waveformData: jsonb("waveform_data"),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
 });
 
 export const voiceClones = pgTable("voice_clones", {
@@ -32,10 +40,13 @@ export const voiceClones = pgTable("voice_clones", {
 export const insertProjectSchema = createInsertSchema(projects).omit({
   id: true,
   createdAt: true,
+  updatedAt: true,
 });
 
 export const insertAudioTrackSchema = createInsertSchema(audioTracks).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 export const insertVoiceCloneSchema = createInsertSchema(voiceClones).omit({

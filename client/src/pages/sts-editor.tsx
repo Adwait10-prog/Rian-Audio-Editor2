@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import WaveSurfer from "wavesurfer.js";
@@ -10,11 +10,38 @@ import VideoPlayer from "@/components/sts/video-player";
 import ContextMenu from "@/components/sts/context-menu";
 import STSModal from "@/components/sts/sts-modal";
 import EditSpeakerModal from "@/components/sts/edit-speaker-modal";
+import VoicesManager from "@/components/sts/voices-manager";
 import { useToast } from "@/hooks/use-toast";
-import type { AudioTrack as AudioTrackType, VoiceClone } from "@shared/schema";
+import type { AudioTrack as AudioTrackType } from "@shared/schema";
+
+interface Project {
+  id: number;
+  name: string;
+  clientName: string;
+  languagePair: string;
+  videoFile: string | null;
+  sourceAudioFile: string | null;
+  videoDuration: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export default function STSEditor() {
-  const [currentProject] = useState({ id: 1, name: "Sample Project" });
+  // Get project ID from URL params first
+  const [match, params] = useRoute("/sts-editor/:projectId?");
+  const urlProjectId = params?.projectId ? parseInt(params.projectId) : 1;
+  
+  const [currentProject, setCurrentProject] = useState<Project>({ 
+    id: urlProjectId, 
+    name: "Loading...",
+    clientName: "Loading...",
+    languagePair: "English to English",
+    videoFile: null,
+    sourceAudioFile: null,
+    videoDuration: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; x: number; y: number; trackId?: number }>({
     visible: false,
     x: 0,
@@ -26,6 +53,14 @@ export default function STSEditor() {
   const [editSpeakerModal, setEditSpeakerModal] = useState<{ visible: boolean; trackId?: number; currentName?: string }>({
     visible: false
   });
+  const [voicesManagerOpen, setVoicesManagerOpen] = useState(false);
+  const [selectedVoices, setSelectedVoices] = useState<Array<{
+    voice_id: string;
+    name: string;
+    description?: string;
+    category: string;
+    labels: Record<string, string>;
+  }>>([]);
   const [isPlaying, setIsPlaying] = useState(false);
   // Global timeline zoom state
   const [zoomLevel, setZoomLevel] = useState(100);
@@ -40,6 +75,8 @@ export default function STSEditor() {
     type: string;
     url: string;
     size: number;
+    trackId?: number;
+    isFromTrack?: boolean;
   }>>([]);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -47,26 +84,46 @@ export default function STSEditor() {
   const queryClient = useQueryClient();
   const [, setLocation] = useLocation();
 
-  const { data: tracks = [], isLoading } = useQuery<AudioTrackType[]>({
+  const { data: tracks = [], isLoading, refetch: refetchTracks } = useQuery<AudioTrackType[]>({
     queryKey: ["/api/projects", currentProject.id, "tracks"],
     enabled: !!currentProject.id
   });
 
-  const { data: voiceClones = [] } = useQuery<VoiceClone[]>({
-    queryKey: ["/api/voice-clones"]
-  });
+  // Voice clones query - removed in favor of selectedVoices state managed by VoicesManager
 
-  const { data: project } = useQuery({
+  const { data: project } = useQuery<Project>({
     queryKey: ["/api/projects", currentProject.id],
+    queryFn: () => apiRequest(`/api/projects/${currentProject.id}`),
     enabled: !!currentProject.id
   });
+
+  // Update current project when data changes
+  useEffect(() => {
+    if (project && project.id === currentProject.id) {
+      setCurrentProject(project);
+    }
+  }, [project, currentProject.id]);
+
+  // Update project ID when URL parameter changes (for page refreshes)
+  useEffect(() => {
+    if (urlProjectId !== currentProject.id) {
+      setCurrentProject(prev => ({ ...prev, id: urlProjectId }));
+    }
+  }, [urlProjectId, currentProject.id]);
+
+  // Reset UI state when project changes
+  useEffect(() => {
+    // Clear any visual artifacts when project ID changes
+    setIsGlobalPlaying(false);
+    setGlobalPlaybackTime(0);
+  }, [currentProject.id]);
 
   // Timeline scroll and duration state
   const timelineScrollRef = useRef<HTMLDivElement>(null);
   const tracksScrollRef = useRef<HTMLDivElement>(null);
   const sourceAudioRef = useRef<HTMLAudioElement>(null);
-  const [scrollLeft, setScrollLeft] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [scrollLeft, setScrollLeft] = useState(0);
   const [globalPlaybackTime, setGlobalPlaybackTime] = useState(0);
   const [isGlobalPlaying, setIsGlobalPlaying] = useState(false);
   const lastUpdateTime = useRef(0);
@@ -74,11 +131,59 @@ export default function STSEditor() {
 
   // Compute max duration from all tracks (for ruler/grid) - moved after track definitions
 
-  // Handle scroll sync with auto-scroll disable
-  const handleTimelineScroll = () => {
+  // Track solo/mute handlers
+  const toggleTrackSolo = useCallback((trackId: number) => {
+    setTrackStates(prev => ({
+      ...prev,
+      [trackId]: {
+        ...prev[trackId],
+        isSolo: !prev[trackId]?.isSolo,
+        isMuted: prev[trackId]?.isMuted || false
+      }
+    }));
+  }, []);
+  
+  const toggleTrackMute = useCallback((trackId: number) => {
+    setTrackStates(prev => ({
+      ...prev,
+      [trackId]: {
+        ...prev[trackId],
+        isSolo: prev[trackId]?.isSolo || false,
+        isMuted: !prev[trackId]?.isMuted
+      }
+    }));
+  }, []);
+
+  // Handle audio duration detection
+  const handleAudioDurationDetected = useCallback((trackId: number, duration: number) => {
+    setAudioDurations(prev => ({ ...prev, [trackId]: duration }));
+    
+    // Update container width after duration is detected
+    setTimeout(() => {
+      const sourceContainer = document.getElementById(`waveform-source-${trackId}`);
+      const speakerContainer = document.getElementById(`waveform-speaker-${trackId}`);
+      
+      const newWidth = `${duration * zoomLevel}px`;
+      
+      if (sourceContainer) {
+        sourceContainer.style.width = newWidth;
+      }
+      if (speakerContainer) {
+        speakerContainer.style.width = newWidth;
+      }
+    }, 100);
+  }, [zoomLevel]);
+
+  // Handle scroll sync with auto-scroll disable - throttled for better performance
+  const scrollThrottleRef = useRef<number>(0);
+  const handleTimelineScroll = useCallback(() => {
     if (timelineScrollRef.current) {
-      const newScrollLeft = timelineScrollRef.current.scrollLeft;
-      setScrollLeft(newScrollLeft);
+      const now = performance.now();
+      if (now - scrollThrottleRef.current > 8) { // Throttle to ~120fps for smooth scrolling
+        const newScrollLeft = timelineScrollRef.current.scrollLeft;
+        setScrollLeft(newScrollLeft);
+        scrollThrottleRef.current = now;
+      }
       
       // Disable auto-scroll if user manually scrolled
       if (isGlobalPlaying) {
@@ -94,7 +199,7 @@ export default function STSEditor() {
         tracksScrollRef.current.scrollTop = timelineScrollRef.current.scrollTop;
       }
     }
-  };
+  }, [isGlobalPlaying]);
 
   const handleTracksScroll = () => {
     if (tracksScrollRef.current && timelineScrollRef.current) {
@@ -110,7 +215,7 @@ export default function STSEditor() {
     const rect = timelineScrollRef.current?.getBoundingClientRect();
     const mouseX = rect ? e.clientX - rect.left : 0;
     const focusTime = ((mouseX + (timelineScrollRef.current?.scrollLeft || 0)) / zoomLevel) || 0;
-    const ZOOM_LEVELS = [30, 50, 80, 100, 150, 200, 300, 400, 600, 1000, 1500, 2000];
+    const ZOOM_LEVELS = [10, 15, 25, 50, 75, 100, 150, 200, 300, 500, 750, 1000, 1500, 2000];
     const currentIndex = ZOOM_LEVELS.findIndex(z => z >= zoomLevel);
     let newZoom = zoomLevel;
     if (e.deltaY > 0 && currentIndex > 0) newZoom = ZOOM_LEVELS[currentIndex - 1];
@@ -137,12 +242,34 @@ export default function STSEditor() {
 
   const uploadFileMutation = useMutation({
     mutationFn: async (file: File) => {
+      if (!currentProject?.id) {
+        throw new Error('No project selected');
+      }
+      
       const formData = new FormData();
       formData.append('file', file);
-      const response = await fetch('/api/upload', {
+      console.log('Uploading to project:', currentProject.id);
+      
+      const response = await fetch(`/api/projects/${currentProject.id}/upload`, {
         method: 'POST',
         body: formData
       });
+      
+      console.log('Upload response status:', response.status);
+      
+      if (!response.ok) {
+        // Try to parse as JSON first, fallback to text if it fails
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const error = await response.json();
+          throw new Error(error.message || 'Upload failed');
+        } else {
+          const text = await response.text();
+          console.error('Non-JSON response:', text);
+          throw new Error('Upload failed - server returned non-JSON response');
+        }
+      }
+      
       return response.json();
     },
     onSuccess: () => {
@@ -151,7 +278,14 @@ export default function STSEditor() {
   });
 
   const createTrackMutation = useMutation({
-    mutationFn: async (trackData: { trackType: string; trackName: string; audioFile?: string }) => {
+    mutationFn: async (trackData: { 
+      trackType: string; 
+      trackName: string; 
+      audioFile?: string;
+      originalFileName?: string;
+      fileSize?: number;
+      duration?: number;
+    }) => {
       return apiRequest(`/api/projects/${currentProject.id}/tracks`, {
         method: 'POST',
         body: trackData
@@ -186,7 +320,7 @@ export default function STSEditor() {
   });
 
   const generateSTSMutation = useMutation({
-    mutationFn: async ({ trackId, voiceCloneId, timeRange }: { trackId: number; voiceCloneId: number; timeRange?: { start: number; end: number } }) => {
+    mutationFn: async ({ trackId, voiceCloneId, timeRange }: { trackId: number; voiceCloneId: number | string; timeRange?: { start: number; end: number } }) => {
       return apiRequest("/api/generate-sts", {
         method: 'POST',
         body: { trackId, voiceCloneId, timeRange }
@@ -204,10 +338,15 @@ export default function STSEditor() {
   const handleFileUpload = async (file: File, trackType: string, trackName: string) => {
     try {
       const uploadResult = await uploadFileMutation.mutateAsync(file);
+      // Store the full project-specific path
+      const audioFilePath = `project-${currentProject.id}/${uploadResult.filename}`;
       await createTrackMutation.mutateAsync({
         trackType,
         trackName,
-        audioFile: uploadResult.filename
+        audioFile: audioFilePath,
+        originalFileName: file.name,
+        fileSize: file.size,
+        duration: undefined // Will be determined by audio analysis if needed
       });
       toast({
         title: "File Uploaded",
@@ -227,18 +366,29 @@ export default function STSEditor() {
       const formData = new FormData();
       formData.append('file', file);
       
-      const response = await apiRequest('/api/upload', {
+      const response = await fetch(`/api/projects/${currentProject.id}/upload`, {
         method: 'POST',
         body: formData
       });
       
-      // Update current project with video file
+      if (!response.ok) {
+        throw new Error('Upload failed');
+      }
+      
+      const result = await response.json();
+      
+      // Update current project with video file - store with project folder path
       await apiRequest(`/api/projects/${currentProject.id}`, {
         method: 'PUT',
-        body: { videoFile: response.filename }
+        body: { 
+          videoFile: `project-${currentProject.id}/${result.filename}`,
+          videoDuration: null // Will be updated when audio is extracted
+        }
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
+      
       toast({
         title: "Video Uploaded",
         description: "Video file has been uploaded successfully."
@@ -257,16 +407,55 @@ export default function STSEditor() {
 
   // --- AUDIO EXTRACTED HANDLER (after FFmpeg) ---
   const handleAudioExtracted = async (audioUrl: string) => {
+    console.log('handleAudioExtracted called with audioUrl:', audioUrl);
     try {
       // Create or update source audio track with extracted audio
       // Try to find source track, update if exists, else create
       const sourceTrack = tracks.find((t) => t.trackType === 'source');
-      const audioFileName = audioUrl?.replace('/uploads/', '') || undefined;
+      console.log('Found source track:', sourceTrack);
+      
+      // Extract just the filename from the URL
+      const audioFileName = audioUrl?.startsWith('/uploads/') 
+        ? audioUrl.replace('/uploads/', '') 
+        : audioUrl?.replace('uploads/', '') || undefined;
+      
+      console.log('Extracted audio filename:', audioFileName);
+      
       if (sourceTrack) {
+        // Clear old waveform cache for this track before updating
+        const oldWaveformKeys = Array.from(waveformInitialized.current)
+          .filter(key => key.includes(`waveform-source-${sourceTrack.id}`));
+        oldWaveformKeys.forEach(key => waveformInitialized.current.delete(key));
+        
+        // Clear the container to remove old waveform
+        const container = document.getElementById(`waveform-source-${sourceTrack.id}`);
+        if (container) {
+          container.innerHTML = '';
+        }
+        
         await updateTrackMutation.mutateAsync({ id: sourceTrack.id, updates: { audioFile: audioFileName } });
+        
+        // Also update project with source audio file
+        await apiRequest(`/api/projects/${currentProject.id}`, {
+          method: 'PUT',
+          body: { sourceAudioFile: audioFileName }
+        });
       } else {
         await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: audioFileName });
+        
+        // Also update project with source audio file
+        await apiRequest(`/api/projects/${currentProject.id}`, {
+          method: 'PUT',
+          body: { sourceAudioFile: audioFileName }
+        });
       }
+      
+      // Force waveform re-initialization after a short delay
+      setTimeout(() => {
+        const event = new CustomEvent('force-waveform-init');
+        document.dispatchEvent(event);
+      }, 500);
+      
       toast({
         title: "Audio Extracted",
         description: "Audio has been extracted from video and added to source track."
@@ -282,8 +471,10 @@ export default function STSEditor() {
       // Upload file
       const uploadResult = await uploadFileMutation.mutateAsync(file);
       if (!uploadResult.filename) throw new Error('Upload failed');
+      // Store the full project-specific path
+      const audioFilePath = `project-${currentProject.id}/${uploadResult.filename}`;
       // Update track with new audio file
-      await updateTrackMutation.mutateAsync({ id: track.id, updates: { audioFile: uploadResult.filename } });
+      await updateTrackMutation.mutateAsync({ id: track.id, updates: { audioFile: audioFilePath } });
       toast({ title: "Audio Uploaded", description: `${track.trackName} audio updated.` });
     } catch (error) {
       toast({ title: "Upload Failed", description: "Failed to upload audio.", variant: "destructive" });
@@ -297,10 +488,12 @@ export default function STSEditor() {
       const scrollLeft = timelineScrollRef.current.scrollLeft;
       const viewportWidth = timelineScrollRef.current.clientWidth;
       
-      // Auto-scroll when playhead approaches the right edge
-      if (playheadPosition > scrollLeft + viewportWidth - 200) {
+      // Auto-scroll when playhead approaches the right edge OR when playhead is not visible at all
+      const playheadVisible = playheadPosition >= scrollLeft && playheadPosition <= scrollLeft + viewportWidth;
+      
+      if (!playheadVisible || playheadPosition > scrollLeft + viewportWidth - 200) {
         // Use smooth scrolling with requestAnimationFrame for better performance
-        const targetScroll = playheadPosition - 200;
+        const targetScroll = Math.max(0, playheadPosition - 200);
         const startScroll = scrollLeft;
         const scrollDiff = targetScroll - startScroll;
         const duration = 300; // ms
@@ -325,10 +518,10 @@ export default function STSEditor() {
     }
   }, [globalPlaybackTime, isGlobalPlaying, zoomLevel]);
 
-  // Throttled playback time update callback
+  // Throttled playback time update callback - improved smoothness
   const handlePlaybackTimeUpdate = useCallback((time: number) => {
     const now = performance.now();
-    if (now - lastUpdateTime.current > 50) { // Throttle to ~20fps
+    if (now - lastUpdateTime.current > 16) { // Throttle to ~60fps for smoother updates
       setGlobalPlaybackTime(time);
       lastUpdateTime.current = now;
     }
@@ -345,9 +538,9 @@ export default function STSEditor() {
         const uploadData = await uploadFileMutation.mutateAsync(file);
         if (!uploadData.filename) throw new Error('Video upload failed');
         // Call backend to extract audio
-        const audioData = await apiRequest('/api/extract-audio', {
+        const audioData = await apiRequest(`/api/projects/${currentProject.id}/extract-audio`, {
           method: 'POST',
-          body: { filePath: `uploads/${uploadData.filename}` }
+          body: { filePath: `uploads/project-${currentProject.id}/${uploadData.filename}` }
         });
         if (!audioData.success) throw new Error(audioData.message || 'Audio extraction failed');
         await handleAudioExtracted(audioData.audioFile);
@@ -362,7 +555,8 @@ export default function STSEditor() {
       } else {
         // If no source track, create one
         const uploadResult = await uploadFileMutation.mutateAsync(file);
-        await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: uploadResult.filename });
+        const audioFilePath = `project-${currentProject.id}/${uploadResult.filename}`;
+        await createTrackMutation.mutateAsync({ trackType: 'source', trackName: 'Source Audio', audioFile: audioFilePath });
       }
       toast({ title: 'Success', description: 'Source audio updated.' });
     }
@@ -476,11 +670,11 @@ export default function STSEditor() {
           const fileName = audioFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
           const newTrackName = fileName.substring(0, 4).toUpperCase();
           
-          // Update track with new audio file and name
+          // Update track with new audio file and name (with project-specific path)
           await updateTrackMutation.mutateAsync({ 
             id: trackId, 
             updates: { 
-              audioFile: uploadResult.filename,
+              audioFile: `project-${currentProject.id}/${uploadResult.filename}`,
               trackName: newTrackName
             } 
           });
@@ -507,7 +701,7 @@ export default function STSEditor() {
         await createTrackMutation.mutateAsync({
           trackType: 'speaker',
           trackName: newTrackName,
-          audioFile: uploadResult.filename
+          audioFile: `project-${currentProject.id}/${uploadResult.filename}`
         });
         
         toast({
@@ -553,18 +747,18 @@ export default function STSEditor() {
       };
       setUploadedFiles(prev => [...prev, newFile]);
 
-      // Update project with video file
+      // Update project with video file - store with project folder path
       console.log('Updating project with video file...');
       await apiRequest(`/api/projects/${currentProject.id}`, {
         method: 'PUT',
-        body: { videoFile: uploadResult.filename }
+        body: { videoFile: `project-${currentProject.id}/${uploadResult.filename}` }
       });
 
       // Extract audio in real-time
       console.log('Extracting audio from video...');
-      const audioData = await apiRequest('/api/extract-audio', {
+      const audioData = await apiRequest(`/api/projects/${currentProject.id}/extract-audio`, {
         method: 'POST',
-        body: { filePath: `uploads/${uploadResult.filename}` }
+        body: { filePath: `uploads/project-${currentProject.id}/${uploadResult.filename}` }
       });
       
       console.log('Audio extraction result:', audioData);
@@ -593,13 +787,17 @@ export default function STSEditor() {
   // Handle file upload to masters
   const handleMasterFileUpload = async (file: File) => {
     try {
+      console.log('Starting master file upload:', file.name, 'Project ID:', currentProject.id);
       const uploadResult = await uploadFileMutation.mutateAsync(file);
+      console.log('Upload result:', uploadResult);
+      
       const newFile = {
         id: `file-${Date.now()}`,
         name: file.name,
         type: file.type,
-        url: `/uploads/${uploadResult.filename}`,
-        size: file.size
+        url: `/uploads/project-${currentProject.id}/${uploadResult.filename}`,
+        size: file.size,
+        isFromTrack: false // Mark as manual upload
       };
       setUploadedFiles(prev => [...prev, newFile]);
       
@@ -607,10 +805,11 @@ export default function STSEditor() {
         title: "File Uploaded",
         description: `${file.name} added to masters.`,
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Master file upload error:', error);
       toast({
         title: "Upload Failed",
-        description: "Failed to upload file.",
+        description: error.message || "Failed to upload file.",
         variant: "destructive"
       });
     }
@@ -618,31 +817,72 @@ export default function STSEditor() {
 
   // Handle drag from masters panel
   const handleMasterFileDrop = async (masterFile: any, e: React.DragEvent) => {
+    console.log('handleMasterFileDrop called with:', masterFile);
+    
     if (masterFile.type.startsWith('video/')) {
       // Update project with video file
       try {
-        const filename = masterFile.url.replace('/uploads/', '');
+        // Extract the path after /uploads/ (includes project folder)
+        const videoPath = masterFile.url.replace(/^\/uploads\//, '');
+        console.log('Updating project with video path:', videoPath);
+        
         await apiRequest(`/api/projects/${currentProject.id}`, {
           method: 'PUT',
-          body: { videoFile: filename }
+          body: { videoFile: videoPath }
         });
         
-        // Extract audio
-        const audioData = await apiRequest('/api/extract-audio', {
+        // Extract audio - the file is already in the project folder
+        console.log('Extracting audio from:', masterFile.url.replace(/^\//, ''));
+        const audioData = await apiRequest(`/api/projects/${currentProject.id}/extract-audio`, {
           method: 'POST',
-          body: { filePath: `uploads/${filename}` }
+          body: { filePath: masterFile.url.replace(/^\//, '') } // Remove leading slash
         });
+        
+        console.log('Audio extraction response:', audioData);
 
         if (audioData.success) {
+          console.log('Calling handleAudioExtracted with:', audioData.audioFile);
           await handleAudioExtracted(audioData.audioFile);
+          console.log('handleAudioExtracted completed');
+        } else {
+          console.error('Audio extraction failed:', audioData);
         }
         
-        queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id] });
+        // Fetch updated project data directly using simple fetch
+        try {
+          const response = await fetch(`/api/projects/${currentProject.id}`);
+          if (response.ok) {
+            const updatedProject = await response.json();
+            console.log('Updated project data:', updatedProject);
+            setCurrentProject(updatedProject);
+          }
+        } catch (fetchError) {
+          console.error('Failed to fetch updated project:', fetchError);
+        }
+        
+        // Invalidate queries to refresh tracks
+        await queryClient.invalidateQueries({ queryKey: ["/api/projects"] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id] });
+        await queryClient.invalidateQueries({ queryKey: ["/api/projects", currentProject.id, "tracks"] });
+        
+        // Explicitly refetch tracks
+        console.log('Refetching tracks after video drop...');
+        await refetchTracks();
+        
+        // Force waveform re-initialization with longer delay to ensure tracks are updated
+        waveformInitialized.current.clear();
+        setTimeout(() => {
+          console.log('Forcing waveform re-initialization...');
+          const event = new CustomEvent('force-waveform-init');
+          document.dispatchEvent(event);
+        }, 1000);
+        
         toast({
           title: "Video Loaded",
           description: "Video loaded in player and audio extracted.",
         });
       } catch (error) {
+        console.error('Error in handleMasterFileDrop:', error);
         toast({
           title: "Error",
           description: "Failed to load video.",
@@ -656,29 +896,38 @@ export default function STSEditor() {
         targetElement = targetElement.parentElement as HTMLElement;
       }
 
-      const filename = masterFile.url.replace('/uploads/', '');
+      // Extract the path after /uploads/ (already includes project folder)
+      const audioPath = masterFile.url.replace(/^\/uploads\//, '');
       const newTrackName = masterFile.name.replace(/\.[^/.]+$/, "").substring(0, 4).toUpperCase();
 
       if (targetElement?.dataset.trackId) {
-        // Assign to existing track
+        // Assign to existing track (with confirmation if track already has audio)
         const trackId = parseInt(targetElement.dataset.trackId);
+        const existingTrack = tracks.find(t => t.id === trackId);
+        
+        if (existingTrack?.audioFile) {
+          // Track already has audio, show confirmation
+          const confirmed = window.confirm(`Replace existing audio in ${existingTrack.trackName}?`);
+          if (!confirmed) return;
+        }
+        
         await updateTrackMutation.mutateAsync({ 
           id: trackId, 
           updates: { 
-            audioFile: filename,
+            audioFile: audioPath,
             trackName: newTrackName
           } 
         });
         toast({
           title: "Audio Assigned",
-          description: `Audio assigned to track ${newTrackName}`,
+          description: `Audio ${existingTrack?.audioFile ? 'replaced in' : 'assigned to'} track ${newTrackName}`,
         });
       } else {
         // Create new speaker track
         await createTrackMutation.mutateAsync({
           trackType: 'speaker',
           trackName: newTrackName,
-          audioFile: filename
+          audioFile: audioPath
         });
         toast({
           title: "Track Created",
@@ -719,25 +968,53 @@ export default function STSEditor() {
   
   useEffect(() => {
     const initializeWaveforms = () => {
+      console.log('initializeWaveforms called, sourceTrack:', sourceTrack, 'speakerTracks:', speakerTracks);
+      
       // Source audio waveform
       if (sourceTrack?.audioFile) {
+        console.log('Initializing source track waveform, audioFile:', sourceTrack.audioFile);
         const containerId = `waveform-source-${sourceTrack.id}`;
         const waveformKey = `${containerId}-${sourceTrack.audioFile}`;
         
+        console.log('Source track container ID:', containerId);
+        console.log('Source track waveform key:', waveformKey);
+        console.log('Waveform already initialized?', waveformInitialized.current.has(waveformKey));
+        
         if (!waveformInitialized.current.has(waveformKey)) {
           const container = document.getElementById(containerId);
-          if (container && container.children.length === 0) {
+          console.log('Source track container found:', !!container);
+          if (container) { // Removed the children.length check to allow re-initialization
+            // Handle both old format (just filename) and new format (project-1/filename)
             const audioUrl = sourceTrack.audioFile.startsWith('http') || sourceTrack.audioFile.startsWith('/') 
               ? sourceTrack.audioFile 
               : `/uploads/${sourceTrack.audioFile}`;
+            
+            console.log('Initializing source waveform with URL:', audioUrl);
+            
+            // Clear container first
+            container.innerHTML = '';
             
             const wavesurfer = WaveSurfer.create({
               container: `#${containerId}`,
               waveColor: '#4fd1c5',
               progressColor: '#2c7a7b',
               height: 64,
-              normalize: true
+              normalize: true,
+              fillParent: true // Fill the parent container
             });
+            
+            // Add error handling
+            wavesurfer.on('error', (error) => {
+              console.error(`Error loading source waveform from ${audioUrl}:`, error);
+            });
+            
+            // Detect audio duration when loaded
+            wavesurfer.on('ready', () => {
+              console.log(`Source waveform loaded successfully from ${audioUrl}`);
+              const duration = wavesurfer.getDuration();
+              handleAudioDurationDetected(sourceTrack.id, duration);
+            });
+            
             wavesurfer.load(audioUrl);
             waveformInitialized.current.add(waveformKey);
           }
@@ -752,18 +1029,39 @@ export default function STSEditor() {
           
           if (!waveformInitialized.current.has(waveformKey)) {
             const container = document.getElementById(containerId);
-            if (container && container.children.length === 0) {
+            console.log(`Speaker track ${track.trackName} container found:`, !!container);
+            if (container) { // Removed children.length check for consistency
+              // Clear container first
+              container.innerHTML = '';
+              
+              // Handle both old format (just filename) and new format (project-1/filename)
               const audioUrl = track.audioFile.startsWith('http') || track.audioFile.startsWith('/') 
                 ? track.audioFile 
                 : `/uploads/${track.audioFile}`;
+              
+              console.log(`Initializing speaker waveform for ${track.trackName} with URL:`, audioUrl);
               
               const wavesurfer = WaveSurfer.create({
                 container: `#${containerId}`,
                 waveColor: '#4fd1c5',
                 progressColor: '#2c7a7b',
                 height: 64,
-                normalize: true
+                normalize: true,
+                fillParent: true // Fill the parent container
               });
+              
+              // Add error handling
+              wavesurfer.on('error', (error) => {
+                console.error(`Error loading speaker waveform for ${track.trackName} from ${audioUrl}:`, error);
+              });
+              
+              // Detect audio duration when loaded
+              wavesurfer.on('ready', () => {
+                console.log(`Speaker waveform loaded successfully for ${track.trackName} from ${audioUrl}`);
+                const duration = wavesurfer.getDuration();
+                handleAudioDurationDetected(track.id, duration);
+              });
+              
               wavesurfer.load(audioUrl);
               waveformInitialized.current.add(waveformKey);
             }
@@ -774,35 +1072,147 @@ export default function STSEditor() {
 
     // Delay initialization to ensure DOM elements are ready
     const timeoutId = setTimeout(initializeWaveforms, 100);
-    return () => clearTimeout(timeoutId);
+    
+    // Add event listener for forced initialization
+    const forceInitHandler = () => {
+      console.log('Force waveform initialization triggered');
+      setTimeout(initializeWaveforms, 200);
+    };
+    document.addEventListener('force-waveform-init', forceInitHandler);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('force-waveform-init', forceInitHandler);
+    };
   }, [tracks]); // React to changes in tracks
 
   // Define tracks for rendering (must be before conditional returns)
   const sourceTrack = tracks.find((t: AudioTrackType) => t.trackType === 'source');
   const speakerTracks = tracks.filter((t: AudioTrackType) => t.trackType === 'speaker');
   
-  // Compute max duration from all tracks (for ruler/grid) - must be before conditional returns
-  const maxDuration = useMemo(() => {
-    // Get the maximum duration from all loaded tracks
-    let max = 60; // Default minimum duration
+  // Debug logging
+  useEffect(() => {
+    console.log('Tracks updated:', tracks);
+    console.log('Source track:', sourceTrack);
+    console.log('Speaker tracks:', speakerTracks);
+  }, [tracks, sourceTrack, speakerTracks]);
+  
+  // Track audio durations state
+  const [audioDurations, setAudioDurations] = useState<{ [trackId: number]: number }>({});
+
+  // Track solo/mute states
+  const [trackStates, setTrackStates] = useState<{ [trackId: number]: { isSolo: boolean; isMuted: boolean } }>({});
+  
+  // Check if any track is soloed
+  const hasAnyTrackSoloed = useMemo(() => {
+    return Object.values(trackStates).some(state => state.isSolo);
+  }, [trackStates]);
+  
+  // Get effective mute state (considering solo logic)
+  const getEffectiveMuteState = useCallback((trackId: number) => {
+    const trackState = trackStates[trackId];
+    if (!trackState) return false;
     
-    // Check source track duration if available
-    if (sourceTrack?.audioFile) {
-      // For now, use a reasonable default. In a real app, you'd get this from audio metadata
-      max = Math.max(max, 37); // User mentioned source audio is 37 seconds
+    // If any track is soloed, only soloed tracks play
+    if (hasAnyTrackSoloed) {
+      return !trackState.isSolo;
     }
     
-    // Check speaker tracks
-    speakerTracks.forEach(track => {
-      if (track.audioFile) {
-        // In a real app, you'd get actual duration from audio metadata
-        max = Math.max(max, 30); // Default speaker track duration
-      }
+    // Otherwise, just check if this track is muted
+    return trackState.isMuted;
+  }, [trackStates, hasAnyTrackSoloed]);
+
+  // Sync uploaded files with track files
+  useEffect(() => {
+    const trackFiles = tracks
+      .filter(track => track.audioFile)
+      .map(track => ({
+        id: `track-${track.id}`,
+        name: track.trackName || 'Audio File',
+        type: 'audio',
+        url: `/uploads/${track.audioFile}`,
+        size: 0, // We don't have size info from tracks
+        trackId: track.id,
+        isFromTrack: true
+      }));
+
+    // Merge with manually uploaded files (keep existing ones that aren't from tracks)
+    setUploadedFiles(prev => {
+      const manualFiles = prev.filter(file => !file.isFromTrack);
+      return [...manualFiles, ...trackFiles];
+    });
+  }, [tracks]);
+
+  // --- PROJECT MANAGEMENT ---
+  const handleProjectChange = (newProject: Project) => {
+    // Clear React Query cache for the old project first
+    queryClient.removeQueries({ 
+      queryKey: ["/api/projects", currentProject.id, "tracks"] 
     });
     
-    // Add some padding for editing
-    return max + 10;
-  }, [sourceTrack, speakerTracks]);
+    // Navigate to the new project URL
+    setLocation(`/sts-editor/${newProject.id}`);
+    
+    setCurrentProject(newProject);
+    
+    // Clear any cached data for waveforms when switching projects
+    waveformInitialized.current.clear();
+    
+    // Reset playback state
+    setIsGlobalPlaying(false);
+    setGlobalPlaybackTime(0);
+    
+    // Clear uploaded files cache
+    setUploadedFiles([]);
+    
+    // Clear all waveform containers to prevent showing old data
+    setTimeout(() => {
+      document.querySelectorAll('[id^="waveform-"]').forEach(container => {
+        if (container instanceof HTMLElement) {
+          container.innerHTML = '';
+        }
+      });
+      // Force waveform re-initialization after clearing
+      const event = new CustomEvent('force-waveform-clear');
+      document.dispatchEvent(event);
+    }, 100);
+    
+    // Scroll to top when switching projects
+    if (timelineScrollRef.current) {
+      timelineScrollRef.current.scrollTop = 0;
+      timelineScrollRef.current.scrollLeft = 0;
+    }
+    if (tracksScrollRef.current) {
+      tracksScrollRef.current.scrollTop = 0;
+    }
+    
+    // Force re-render of queries for new project
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", newProject.id] });
+    queryClient.invalidateQueries({ queryKey: ["/api/projects", newProject.id, "tracks"] });
+    
+    // Clear audio durations state for new project
+    setAudioDurations({});
+    
+    toast({
+      title: "Project Switched",
+      description: `Switched to project: ${newProject.name}`
+    });
+  };
+
+  // Compute max duration from all tracks (for ruler/grid) - must be before conditional returns
+  const maxDuration = useMemo(() => {
+    // Use actual audio durations if available
+    const allDurations = Object.values(audioDurations).filter(d => d > 0);
+    
+    if (allDurations.length > 0) {
+      const maxActualDuration = Math.max(...allDurations);
+      // Add some padding for editing, but not too much
+      return maxActualDuration + 10;
+    }
+    
+    // Fallback: if no durations detected yet, use shorter default
+    return 60;
+  }, [audioDurations]);
 
   if (isLoading) {
     return (
@@ -814,13 +1224,13 @@ export default function STSEditor() {
 
   // --- GLOBAL TIMELINE CONTROLS ---
   const handleZoomIn = () => {
-    const newZoom = Math.min(zoomLevel * 1.5, 100);
+    const newZoom = Math.min(zoomLevel * 1.5, 2000); // Allow much higher zoom
     setZoomLevel(newZoom);
     // Broadcast zoom to all waveform instances
     document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
   };
   const handleZoomOut = () => {
-    const newZoom = Math.max(zoomLevel / 1.5, 1);
+    const newZoom = Math.max(zoomLevel / 1.5, 10); // Minimum zoom to prevent disappearing
     setZoomLevel(newZoom);
     document.dispatchEvent(new CustomEvent('global-waveform-zoom', { detail: { zoom: newZoom } }));
   };
@@ -857,8 +1267,10 @@ export default function STSEditor() {
         onNavigateToProjects={() => setLocation('/')}
         viewSettings={viewSettings}
         onViewSettingsChange={setViewSettings}
+        onVoicesManager={() => setVoicesManagerOpen(true)}
+        currentProject={currentProject}
+        onProjectChange={handleProjectChange}
         customLogo={<img src="/src/logo.png" alt="Brand Logo" className="w-7 h-7 object-contain" />}
-
       />
       <TimelineControls
         onZoomIn={handleZoomIn}
@@ -906,22 +1318,37 @@ export default function STSEditor() {
                   {uploadedFiles.map((file) => (
                     <div
                       key={file.id}
-                      className="flex items-center p-2 rounded hover:bg-gray-800 cursor-pointer group"
+                      className={`flex items-center p-2 rounded hover:bg-gray-800 cursor-pointer group ${
+                        file.isFromTrack ? 'border-l-2 border-green-500' : ''
+                      }`}
                       draggable
                       onDragStart={(e) => {
                         e.dataTransfer.setData('application/json', JSON.stringify(file));
                       }}
                     >
-                      <div className="mr-3 text-lg">
-                        {file.type.startsWith('video/') ? '📹' : 
+                      <div className={`mr-3 text-lg ${
+                        file.isFromTrack ? 'text-green-400' : 'text-blue-400'
+                      }`}>
+                        {file.isFromTrack ? '🎤' : 
+                         file.type.startsWith('video/') ? '📹' : 
                          file.type.startsWith('audio/') ? '🎵' : '📄'}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="text-sm text-white truncate">{file.name}</div>
+                        <div className="text-sm text-white truncate">
+                          {file.name}
+                          {file.isFromTrack && (
+                            <span className="ml-2 text-xs text-green-400">(from track)</span>
+                          )}
+                        </div>
                         <div className="text-xs text-gray-400">
-                          {(file.size / 1024 / 1024).toFixed(1)} MB
+                          {file.size > 0 ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : 'Track audio'}
                         </div>
                       </div>
+                      {!file.isFromTrack && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button className="text-gray-400 hover:text-red-400 text-sm ml-2">×</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                   
@@ -937,10 +1364,16 @@ export default function STSEditor() {
 
           {/* Video Player - Right Side */}
           {viewSettings.showVideo && (
-            <div className="flex-1 bg-gray-800 flex items-center justify-center p-4">
+            <div 
+              className="flex-1 bg-gray-800 flex items-center justify-center p-4"
+              onDrop={handleDrop}
+              onDragOver={handleDragOver}
+            >
               <div className="w-full h-full max-w-3xl">
                 <VideoPlayer 
-                  videoFile={(project as any)?.videoFile}
+                  key={`video-player-${currentProject.id}`}
+                  videoFile={currentProject?.videoFile || undefined}
+                  projectId={currentProject?.id}
                   onAudioExtracted={handleAudioExtracted}
                   globalPlaybackTime={globalPlaybackTime}
                   onPlaybackTimeUpdate={handlePlaybackTimeUpdate}
@@ -969,7 +1402,11 @@ export default function STSEditor() {
               >
                 {/* Source Audio Controls */}
                 {sourceTrack && (
-                  <div className="p-3 border-b border-gray-600 bg-gray-800" style={{height: '140px'}}>
+                  <div 
+                    key={`source-controls-${currentProject.id}-${sourceTrack.id}`}
+                    className="p-3 border-b border-gray-600 bg-gray-800" 
+                    style={{height: '140px'}}
+                  >
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-xs font-medium text-white truncate">Source Audio</span>
                       <div className="w-3 h-3 bg-blue-500 rounded border border-gray-400"></div>
@@ -985,8 +1422,22 @@ export default function STSEditor() {
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex space-x-1">
                         <button className="w-6 h-6 flex items-center justify-center bg-red-600 hover:bg-red-500 rounded text-xs text-white font-bold">R</button>
-                        <button className="w-6 h-6 flex items-center justify-center bg-gray-600 hover:bg-gray-500 rounded text-xs text-white">S</button>
-                        <button className="w-6 h-6 flex items-center justify-center bg-gray-600 hover:bg-gray-500 rounded text-xs text-white">M</button>
+                        <button 
+                          onClick={() => toggleTrackSolo(sourceTrack.id)}
+                          className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold transition-colors ${
+                            trackStates[sourceTrack.id]?.isSolo 
+                              ? 'bg-yellow-500 hover:bg-yellow-400 text-black' 
+                              : 'bg-gray-600 hover:bg-gray-500 text-white'
+                          }`}
+                        >S</button>
+                        <button 
+                          onClick={() => toggleTrackMute(sourceTrack.id)}
+                          className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold transition-colors ${
+                            trackStates[sourceTrack.id]?.isMuted 
+                              ? 'bg-red-500 hover:bg-red-400 text-white' 
+                              : 'bg-gray-600 hover:bg-gray-500 text-white'
+                          }`}
+                        >M</button>
                       </div>
                       <button 
                         onClick={() => fileInputRef.current?.click()}
@@ -1029,16 +1480,30 @@ export default function STSEditor() {
                         className="w-full text-xs bg-gray-700 text-white border border-gray-600 rounded px-1 py-0.5"
                       >
                         <option value="">Select Voice...</option>
-                        {voiceClones.map((voice) => (
-                          <option key={voice.id} value={voice.id}>{voice.name}</option>
+                        {selectedVoices.map((voice) => (
+                          <option key={voice.voice_id} value={voice.voice_id}>{voice.name}</option>
                         ))}
                       </select>
                     </div>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex space-x-1">
                         <button className="w-6 h-6 flex items-center justify-center bg-red-600 hover:bg-red-500 rounded text-xs text-white font-bold">R</button>
-                        <button className="w-6 h-6 flex items-center justify-center bg-gray-600 hover:bg-gray-500 rounded text-xs text-white">S</button>
-                        <button className="w-6 h-6 flex items-center justify-center bg-gray-600 hover:bg-gray-500 rounded text-xs text-white">M</button>
+                        <button 
+                          onClick={() => toggleTrackSolo(track.id)}
+                          className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold transition-colors ${
+                            trackStates[track.id]?.isSolo 
+                              ? 'bg-yellow-500 hover:bg-yellow-400 text-black' 
+                              : 'bg-gray-600 hover:bg-gray-500 text-white'
+                          }`}
+                        >S</button>
+                        <button 
+                          onClick={() => toggleTrackMute(track.id)}
+                          className={`w-6 h-6 flex items-center justify-center rounded text-xs font-bold transition-colors ${
+                            trackStates[track.id]?.isMuted 
+                              ? 'bg-red-500 hover:bg-red-400 text-white' 
+                              : 'bg-gray-600 hover:bg-gray-500 text-white'
+                          }`}
+                        >M</button>
                       </div>
                       <button 
                         onClick={() => handleSTSGeneration(track.id)}
@@ -1075,7 +1540,8 @@ export default function STSEditor() {
                   className="absolute inset-0"
                   style={{ 
                     transform: `translateX(-${scrollLeft}px)`,
-                    width: Math.max(maxDuration * zoomLevel, 1000)
+                    width: Math.max(maxDuration * zoomLevel, 1000),
+                    minWidth: '1000px' // Ensure timeline never disappears
                   }}
                 >
                   <TimelineRuler
@@ -1097,27 +1563,48 @@ export default function STSEditor() {
                 onWheel={handleTimelineWheel}
                 onDrop={handleDrop}
                 onDragOver={handleDragOver}
-                style={{ scrollbarWidth: 'thin' }}
+                style={{ 
+                  scrollbarWidth: 'thin',
+                  scrollBehavior: 'smooth',
+                  // Hardware acceleration for smoother scrolling
+                  willChange: 'scroll-position',
+                  transform: 'translateZ(0)',
+                  // Better momentum scrolling on iOS/macOS
+                  WebkitOverflowScrolling: 'touch'
+                }}
               >
-                {/* Red Playhead Indicator - Always visible */}
+                {/* Red Playhead Indicator - Always visible and positioned correctly */}
                 <div 
                   className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none playhead-indicator"
                   style={{ 
-                    left: `${globalPlaybackTime * zoomLevel - scrollLeft}px`,
+                    left: `${globalPlaybackTime * zoomLevel}px`,
                     opacity: isGlobalPlaying ? 1 : 0.8
                   }}
                 >
                   <div className="absolute -top-1 -left-1.5 w-3 h-3 bg-red-500 rounded-full"></div>
                 </div>
                 
-                <div style={{ width: Math.max(maxDuration * zoomLevel, 1000), minWidth: '100%' }}>
+                <div style={{ 
+                  width: Math.max(maxDuration * zoomLevel, 1000), 
+                  minWidth: '1000px' // Ensure content area never disappears
+                }}>
                   {/* Source Audio Track */}
                   {sourceTrack && (
-                    <div className="border-b border-gray-600 bg-gray-800 flex items-center px-4" style={{height: '140px'}}>
+                    <div 
+                      key={`source-track-${currentProject.id}-${sourceTrack.id}`}
+                      className="border-b border-gray-600 bg-gray-800 flex items-center px-4" 
+                      style={{height: '140px'}}
+                    >
                       {sourceTrack.audioFile ? (
                         <div 
                           id={`waveform-source-${sourceTrack.id}`}
-                          className="w-full h-16 bg-gray-700 rounded"
+                          className="h-16 bg-gray-700 rounded overflow-hidden"
+                          style={{ 
+                            width: audioDurations[sourceTrack.id] 
+                              ? `${audioDurations[sourceTrack.id] * zoomLevel}px`
+                              : '100%', // Show full width until duration is detected
+                            minWidth: '200px'
+                          }}
                           onContextMenu={(e) => handleContextMenu(e, sourceTrack.id)}
                         ></div>
                       ) : (
@@ -1131,7 +1618,7 @@ export default function STSEditor() {
                   {/* Speaker Tracks */}
                   {speakerTracks.map((track, index) => (
                     <div 
-                      key={track.id} 
+                      key={`speaker-track-${currentProject.id}-${track.id}`} 
                       className="border-b border-gray-600 bg-gray-800 flex items-center relative px-4"
                       style={{height: '170px'}}
                       data-track-id={track.id}
@@ -1140,7 +1627,13 @@ export default function STSEditor() {
                       {track.audioFile ? (
                         <div 
                           id={`waveform-speaker-${track.id}`}
-                          className="w-full h-16 bg-gray-700 rounded ml-2"
+                          className="h-16 bg-gray-700 rounded ml-2 overflow-hidden"
+                          style={{ 
+                            width: audioDurations[track.id] 
+                              ? `${audioDurations[track.id] * zoomLevel}px`
+                              : '100%', // Show full width until duration is detected
+                            minWidth: '200px'
+                          }}
                           onContextMenu={(e) => handleContextMenu(e, track.id)}
                         ></div>
                       ) : (
@@ -1183,13 +1676,13 @@ export default function STSEditor() {
 
       <STSModal
         visible={stsModal.visible}
-        voiceClones={voiceClones}
+        voices={selectedVoices}
         onClose={() => setStsModal({ visible: false })}
-        onGenerate={(voiceCloneId) => {
+        onGenerate={(voiceId) => {
           if (stsModal.trackId) {
             generateSTSMutation.mutate({
               trackId: stsModal.trackId,
-              voiceCloneId,
+              voiceCloneId: voiceId,
               timeRange: stsModal.timeRange
             });
           }
@@ -1237,6 +1730,19 @@ export default function STSEditor() {
           style={{ display: 'none' }}
         />
       )}
+
+      <VoicesManager
+        isOpen={voicesManagerOpen}
+        onClose={() => setVoicesManagerOpen(false)}
+        onVoicesSelected={(voices) => {
+          setSelectedVoices(voices);
+          toast({
+            title: "Voices Updated",
+            description: `${voices.length} voice${voices.length !== 1 ? 's' : ''} selected for this project`,
+          });
+        }}
+        selectedVoiceIds={selectedVoices.map(v => v.voice_id)}
+      />
     </>
   );
 }

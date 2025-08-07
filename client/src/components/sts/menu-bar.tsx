@@ -8,7 +8,20 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem
 } from "@/components/ui/dropdown-menu";
-import { Play, Square, Save, Upload, Download, Trash2, RefreshCw, Music, Mic, Check, Video } from "lucide-react";
+import { Play, Square, Save, Upload, Download, Trash2, RefreshCw, Music, Mic, Check, Video, Users } from "lucide-react";
+import ProjectSelector from "./project-selector";
+
+interface Project {
+  id: number;
+  name: string;
+  clientName: string;
+  languagePair: string;
+  videoFile: string | null;
+  sourceAudioFile: string | null;
+  videoDuration: number | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 interface MenuBarProps {
   onPlayAll: () => void;
@@ -23,6 +36,9 @@ interface MenuBarProps {
     showME: boolean;
   };
   onViewSettingsChange: (settings: any) => void;
+  onVoicesManager?: () => void;
+  currentProject?: Project;
+  onProjectChange?: (project: Project) => void;
   customLogo?: React.ReactNode;
 }
 
@@ -35,6 +51,9 @@ export default function MenuBar({
   onNavigateToProjects,
   viewSettings,
   onViewSettingsChange,
+  onVoicesManager,
+  currentProject,
+  onProjectChange,
   customLogo
 }: MenuBarProps) {
   const [autoSave, setAutoSave] = useState(true);
@@ -80,6 +99,14 @@ export default function MenuBar({
             )}
             <span className="font-semibold text-lg">RIAN STS Editor</span>
           </div>
+
+          {/* Project Selector */}
+          {currentProject && onProjectChange && (
+            <ProjectSelector
+              currentProjectId={currentProject.id}
+              onProjectChange={onProjectChange}
+            />
+          )}
 
           <div className="flex items-center space-x-4">
             {/* File Menu */}
@@ -190,6 +217,14 @@ export default function MenuBar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="rian-surface rian-border min-w-48">
+                <DropdownMenuItem 
+                  className="hover:rian-elevated"
+                  onClick={onVoicesManager}
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Manage Voices
+                </DropdownMenuItem>
+                <DropdownMenuSeparator className="rian-border" />
                 <DropdownMenuItem className="hover:rian-elevated">
                   <div className="w-4 h-4 mr-2 text-[var(--rian-accent)]">🤖</div>
                   Generate Speech to Speech

@@ -3,19 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Bot, Clock, X } from "lucide-react";
-import type { VoiceClone } from "@shared/schema";
+interface Voice {
+  voice_id: string;
+  name: string;
+  description?: string;
+  category: string;
+  labels: Record<string, string>;
+}
 
 interface STSModalProps {
   visible: boolean;
-  voiceClones: VoiceClone[];
+  voices: Voice[];
   onClose: () => void;
-  onGenerate: (voiceCloneId: number) => void;
+  onGenerate: (voiceId: string) => void;
   isLoading?: boolean;
 }
 
 export default function STSModal({
   visible,
-  voiceClones,
+  voices,
   onClose,
   onGenerate,
   isLoading = false
@@ -24,7 +30,7 @@ export default function STSModal({
 
   const handleGenerate = () => {
     if (selectedVoice) {
-      onGenerate(parseInt(selectedVoice));
+      onGenerate(selectedVoice);
     }
   };
 
@@ -55,11 +61,11 @@ export default function STSModal({
                 <SelectValue placeholder="Choose a voice clone..." />
               </SelectTrigger>
               <SelectContent className="rian-surface rian-border">
-                {voiceClones.map((voice) => (
-                  <SelectItem key={voice.id} value={voice.id.toString()}>
+                {voices.map((voice) => (
+                  <SelectItem key={voice.voice_id} value={voice.voice_id}>
                     <div className="flex flex-col">
                       <span className="font-medium">{voice.name}</span>
-                      <span className="text-xs text-gray-400 capitalize">{voice.voiceType} Voice</span>
+                      <span className="text-xs text-gray-400 capitalize">{voice.category} Voice</span>
                     </div>
                   </SelectItem>
                 ))}

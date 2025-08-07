@@ -11,6 +11,22 @@ import { promisify } from "util";
 
 const execAsync = promisify(exec);
 
+// Function to create project-specific multer upload
+const createProjectUpload = (projectId: string) => {
+  const projectDir = path.join('uploads', `project-${projectId}`);
+  
+  // Ensure project directory exists
+  if (!fs.existsSync(projectDir)) {
+    fs.mkdirSync(projectDir, { recursive: true });
+  }
+  
+  return multer({ 
+    dest: projectDir,
+    limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
+  });
+};
+
+// Default upload for backward compatibility
 const upload = multer({ 
   dest: 'uploads/',
   limits: { fileSize: 100 * 1024 * 1024 } // 100MB limit
@@ -23,8 +39,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     fs.mkdirSync(uploadsDir, { recursive: true });
   }
 
-  // Serve uploaded files statically  
-  app.use('/uploads', express.static(uploadsDir));
+  // Serve uploaded files statically (includes all subdirectories like project-1, project-2, etc.)
+  app.use('/uploads', express.static(uploadsDir, {
+    fallthrough: false,
+    index: false
+  }));
   
   // Initialize ElevenLabs service if API key is available
   const elevenLabsApiKey = process.env.ELEVENLABS_API_KEY;
@@ -152,7 +171,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // File Upload
+  // Project-specific file upload
+  app.post("/api/projects/:projectId/upload", (req, res) => {
+    const projectId = req.params.projectId;
+    const projectUpload = createProjectUpload(projectId);
+    
+    projectUpload.single('file')(req, res, (err) => {
+      if (err) {
+        console.error('Project file upload failed:', err);
+        return res.status(500).json({ message: "Upload failed" });
+      }
+      
+      try {
+        if (!req.file) {
+          return res.status(400).json({ message: "No file uploaded" });
+        }
+        
+        const fileUrl = `/uploads/project-${projectId}/${req.file.filename}`;
+        res.json({ 
+          filename: req.file.filename,
+          originalName: req.file.originalname,
+          size: req.file.size,
+          url: fileUrl,
+          filePath: req.file.path // Add file path for audio extraction
+        });
+      } catch (error) {
+        console.error('File upload failed:', error);
+        res.status(500).json({ message: "Upload failed" });
+      }
+    });
+  });
+
+  // Legacy file upload (keep for backward compatibility)
   app.post("/api/upload", upload.single('file'), (req, res) => {
     try {
       if (!req.file) {
@@ -173,7 +223,95 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // FFmpeg Audio Extraction Endpoint
+  // Project-specific audio extraction endpoint
+  app.post("/api/projects/:projectId/extract-audio", (req, res) => {
+    const projectId = req.params.projectId;
+    const projectUpload = createProjectUpload(projectId);
+    
+    projectUpload.single('file')(req, res, async (err) => {
+      if (err) {
+        console.error('Project audio extraction upload failed:', err);
+        return res.status(500).json({ message: "Upload failed" });
+      }
+      
+      try {
+        let inputPath: string;
+        let originalName: string;
+        
+        if (req.file) {
+          inputPath = req.file.path;
+          originalName = req.file.originalname || 'extracted_audio';
+        } else if (req.body.filePath) {
+          inputPath = req.body.filePath;
+          originalName = path.basename(inputPath, path.extname(inputPath)) + '.wav';
+        } else {
+          return res.status(400).json({ message: "No file or file path provided" });
+        }
+
+        const outputName = `${path.basename(originalName, path.extname(originalName))}.wav`;
+        const projectDir = path.join('uploads', `project-${projectId}`);
+        const outputPath = path.join(projectDir, outputName);
+        
+        console.log(`Extracting audio from ${inputPath} to ${outputPath}`);
+        
+        const ffmpegCmd = `ffmpeg -y -i "${inputPath}" -vn -acodec pcm_s16le -ar 44100 -ac 2 "${outputPath}"`;
+        console.log('Running FFmpeg command:', ffmpegCmd);
+        
+        const { stdout, stderr } = await execAsync(ffmpegCmd);
+        console.log('FFmpeg stdout:', stdout);
+        if (stderr) console.error('FFmpeg stderr:', stderr);
+        
+        if (!fs.existsSync(outputPath)) {
+          throw new Error('FFmpeg did not create the output file');
+        }
+        
+        const stats = fs.statSync(outputPath);
+        console.log(`Extracted audio file size: ${stats.size} bytes`);
+        
+        // Generate waveform data
+        const pcmPath = outputPath.replace(/\.wav$/, '.pcm');
+        const ffmpegPcmCmd = `ffmpeg -y -i "${outputPath}" -f s16le -acodec pcm_s16le -ar 44100 -ac 1 "${pcmPath}"`;
+        console.log('Running FFmpeg PCM command:', ffmpegPcmCmd);
+        await execAsync(ffmpegPcmCmd);
+
+        const pcmBuffer = fs.readFileSync(pcmPath);
+        const sampleCount = 200;
+        const sampleSize = 2;
+        const totalSamples = Math.floor(pcmBuffer.length / sampleSize);
+        const blockSize = Math.floor(totalSamples / sampleCount);
+        const waveformData: number[] = [];
+        for (let i = 0; i < sampleCount; i++) {
+          let sum = 0;
+          let blockStart = i * blockSize;
+          for (let j = 0; j < blockSize; j++) {
+            const idx = (blockStart + j) * sampleSize;
+            if (idx + 1 >= pcmBuffer.length) break;
+            const sample = pcmBuffer.readInt16LE(idx);
+            sum += Math.abs(sample);
+          }
+          const avg = sum / blockSize;
+          waveformData.push(Math.min(Math.round((avg / 32768) * 100), 100));
+        }
+
+        fs.unlinkSync(pcmPath);
+        
+        res.json({
+          success: true,
+          message: "Audio extraction successful",
+          audioFile: `/uploads/project-${projectId}/${outputName}`,
+          filename: outputName,
+          size: stats.size,
+          waveformData: waveformData,
+          duration: 0 // Will be calculated separately
+        });
+      } catch (error) {
+        console.error('Audio extraction error:', error);
+        res.status(500).json({ message: "Audio extraction failed", error: error.message });
+      }
+    });
+  });
+
+  // Legacy audio extraction endpoint (keep for backward compatibility)
   app.post("/api/extract-audio", upload.single('file'), async (req, res) => {
     console.log('extract-audio req.file:', req.file);
     console.log('extract-audio req.body:', req.body);
@@ -286,12 +424,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Audio track not found or no audio file uploaded" });
       }
 
-      // Get voice clone details
-      const voiceClones = await storage.getAllVoiceClones();
-      const selectedVoice = voiceClones.find(v => v.id === voiceCloneId);
+      // Check if voiceCloneId is a string (ElevenLabs voice ID) or number (database voice clone)
+      let selectedVoiceId = voiceCloneId;
+      let selectedVoiceName = 'ElevenLabs Voice';
       
-      if (!selectedVoice) {
-        return res.status(400).json({ message: "Voice clone not found" });
+      if (typeof voiceCloneId === 'number') {
+        // Legacy voice clone system
+        const voiceClones = await storage.getAllVoiceClones();
+        const selectedVoice = voiceClones.find(v => v.id === voiceCloneId);
+        
+        if (!selectedVoice) {
+          return res.status(400).json({ message: "Voice clone not found" });
+        }
+        
+        selectedVoiceId = selectedVoice.description || 'pNInz6obpgDQGcFmaJgB'; // Default voice ID
+        selectedVoiceName = selectedVoice.name;
+      } else {
+        // Direct ElevenLabs voice ID
+        selectedVoiceId = voiceCloneId;
+        selectedVoiceName = `Voice ${voiceCloneId.substring(0, 8)}`;
       }
 
       const elevenLabsService = getElevenLabsService();
@@ -328,8 +479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       try {
-        // Use ElevenLabs voice ID (for demo, using first voice or fallback)
-        const elevenLabsVoiceId = selectedVoice.description || 'pNInz6obpgDQGcFmaJgB'; // Default voice ID
+        // Use ElevenLabs voice ID
+        const elevenLabsVoiceId = selectedVoiceId;
         
         const processedAudio = await elevenLabsService.speechToSpeech({
           voiceId: elevenLabsVoiceId,
@@ -360,7 +511,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true, 
           processedAudioUrl: `/uploads/${processedFileName}`,
           message: "STS generation completed successfully",
-          voiceClone: selectedVoice.name
+          voiceClone: selectedVoiceName
         });
 
       } catch (elevenLabsError) {
@@ -492,21 +643,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test Python script endpoint
+  app.get("/api/test/voices", async (req, res) => {
+    try {
+      console.log('Testing Python script directly...');
+      const scriptPath = path.join(process.cwd(), 'scripts', 'fetch_voices.py');
+      const { stdout, stderr } = await execAsync(`python3 "${scriptPath}"`);
+      
+      if (stderr) {
+        return res.status(500).json({ message: "Python script error", error: stderr });
+      }
+      
+      const data = JSON.parse(stdout);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ message: "Test failed", error: error.message });
+    }
+  });
+
   // Get ElevenLabs voices endpoint
   app.get("/api/elevenlabs/voices", async (req, res) => {
     try {
-      const elevenLabsService = getElevenLabsService();
+      console.log('Fetching voices from ElevenLabs via Python script...');
       
-      if (!elevenLabsService) {
-        return res.status(503).json({ 
-          message: "ElevenLabs service not configured. Please provide ELEVENLABS_API_KEY." 
+      const scriptPath = path.join(process.cwd(), 'scripts', 'fetch_voices.py');
+      
+      // Check if Python script exists
+      if (!fs.existsSync(scriptPath)) {
+        return res.status(500).json({
+          message: "Python script not found",
+          error: `Script not found at ${scriptPath}`
         });
       }
 
-      const voices = await elevenLabsService.getVoices();
-      res.json(voices);
+      // Execute Python script
+      const { stdout, stderr } = await execAsync(`python3 "${scriptPath}"`);
+      
+      if (stderr) {
+        console.error('Python script stderr:', stderr);
+        try {
+          const errorData = JSON.parse(stderr);
+          return res.status(500).json({
+            message: "Failed to fetch voices from ElevenLabs",
+            error: errorData.message
+          });
+        } catch {
+          return res.status(500).json({
+            message: "Failed to fetch voices from ElevenLabs", 
+            error: stderr
+          });
+        }
+      }
+
+      if (!stdout.trim()) {
+        return res.status(500).json({
+          message: "No data returned from ElevenLabs API",
+          error: "Empty response from Python script"
+        });
+      }
+
+      try {
+        const data = JSON.parse(stdout);
+        console.log(`Successfully fetched ${data.voices?.length || 0} voices via Python script`);
+        res.json(data);
+      } catch (parseError) {
+        console.error('Failed to parse Python script output:', parseError);
+        res.status(500).json({
+          message: "Failed to parse voices data",
+          error: parseError instanceof Error ? parseError.message : "Parse error"
+        });
+      }
+
     } catch (error) {
-      console.error('Failed to fetch ElevenLabs voices:', error);
+      console.error('Failed to execute Python script:', error);
       res.status(500).json({ 
         message: "Failed to fetch voices from ElevenLabs",
         error: error instanceof Error ? error.message : "Unknown error"
@@ -514,15 +723,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve uploaded files
-  app.use('/uploads', (req, res, next) => {
-    const filePath = path.join(process.cwd(), 'uploads', req.path);
-    if (fs.existsSync(filePath)) {
-      res.sendFile(filePath);
-    } else {
-      res.status(404).json({ message: "File not found" });
-    }
-  });
+  // Removed duplicate /uploads middleware - already handled by express.static above
 
   const httpServer = createServer(app);
   return httpServer;
