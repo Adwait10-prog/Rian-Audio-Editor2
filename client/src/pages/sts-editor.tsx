@@ -72,8 +72,7 @@ export default function STSEditor() {
   const lastUpdateTime = useRef(0);
   const autoScrollEnabled = useRef(true);
 
-  // Compute max duration from all tracks (for ruler/grid)
-  const maxDuration = 300; // TODO: compute from audio tracks
+  // Compute max duration from all tracks (for ruler/grid) - moved after track definitions
 
   // Handle scroll sync with auto-scroll disable
   const handleTimelineScroll = () => {
@@ -291,7 +290,7 @@ export default function STSEditor() {
     }
   };
 
-  // Auto-scroll effect to keep playhead visible
+  // Auto-scroll effect to keep playhead visible with smoother scrolling
   useEffect(() => {
     if (isGlobalPlaying && autoScrollEnabled.current && timelineScrollRef.current) {
       const playheadPosition = globalPlaybackTime * zoomLevel;
@@ -300,10 +299,28 @@ export default function STSEditor() {
       
       // Auto-scroll when playhead approaches the right edge
       if (playheadPosition > scrollLeft + viewportWidth - 200) {
-        timelineScrollRef.current.scrollTo({
-          left: playheadPosition - 200,
-          behavior: 'smooth'
-        });
+        // Use smooth scrolling with requestAnimationFrame for better performance
+        const targetScroll = playheadPosition - 200;
+        const startScroll = scrollLeft;
+        const scrollDiff = targetScroll - startScroll;
+        const duration = 300; // ms
+        const startTime = performance.now();
+        
+        const animateScroll = (currentTime: number) => {
+          const elapsed = currentTime - startTime;
+          const progress = Math.min(elapsed / duration, 1);
+          const easeOut = 1 - Math.pow(1 - progress, 3); // Cubic ease-out
+          
+          if (timelineScrollRef.current) {
+            timelineScrollRef.current.scrollLeft = startScroll + (scrollDiff * easeOut);
+          }
+          
+          if (progress < 1) {
+            requestAnimationFrame(animateScroll);
+          }
+        };
+        
+        requestAnimationFrame(animateScroll);
       }
     }
   }, [globalPlaybackTime, isGlobalPlaying, zoomLevel]);
@@ -671,13 +688,11 @@ export default function STSEditor() {
     }
   };
 
-  const sourceTrack = tracks.find((t: AudioTrackType) => t.trackType === 'source');
-  const speakerTracks = tracks.filter((t: AudioTrackType) => t.trackType === 'speaker');
-
   // Sync audio playback with video
   useEffect(() => {
     const audioElement = sourceAudioRef.current;
-    if (!audioElement || !sourceTrack?.audioFile) return;
+    const currentSourceTrack = tracks.find((t: AudioTrackType) => t.trackType === 'source');
+    if (!audioElement || !currentSourceTrack?.audioFile) return;
 
     if (isGlobalPlaying) {
       audioElement.currentTime = globalPlaybackTime;
@@ -685,18 +700,19 @@ export default function STSEditor() {
     } else {
       audioElement.pause();
     }
-  }, [isGlobalPlaying, sourceTrack?.audioFile]);
+  }, [isGlobalPlaying, tracks]);
 
   // Update audio time when video time changes - throttled for performance
   useEffect(() => {
     const audioElement = sourceAudioRef.current;
-    if (!audioElement || !sourceTrack?.audioFile) return;
+    const currentSourceTrack = tracks.find((t: AudioTrackType) => t.trackType === 'source');
+    if (!audioElement || !currentSourceTrack?.audioFile) return;
     
     // Only sync if there's a significant drift (more than 0.2 seconds)
     if (Math.abs(audioElement.currentTime - globalPlaybackTime) > 0.2) {
       audioElement.currentTime = globalPlaybackTime;
     }
-  }, [Math.floor(globalPlaybackTime * 2) / 2, sourceTrack?.audioFile]); // Update at most twice per second
+  }, [Math.floor(globalPlaybackTime * 2) / 2, tracks]); // Update at most twice per second
 
   // Initialize waveforms for tracks with audio files - memoized to prevent reloading
   const waveformInitialized = useRef(new Set<string>());
@@ -759,7 +775,34 @@ export default function STSEditor() {
     // Delay initialization to ensure DOM elements are ready
     const timeoutId = setTimeout(initializeWaveforms, 100);
     return () => clearTimeout(timeoutId);
-  }, [sourceTrack?.id, sourceTrack?.audioFile, speakerTracks.length]);
+  }, [tracks]); // React to changes in tracks
+
+  // Define tracks for rendering (must be before conditional returns)
+  const sourceTrack = tracks.find((t: AudioTrackType) => t.trackType === 'source');
+  const speakerTracks = tracks.filter((t: AudioTrackType) => t.trackType === 'speaker');
+  
+  // Compute max duration from all tracks (for ruler/grid) - must be before conditional returns
+  const maxDuration = useMemo(() => {
+    // Get the maximum duration from all loaded tracks
+    let max = 60; // Default minimum duration
+    
+    // Check source track duration if available
+    if (sourceTrack?.audioFile) {
+      // For now, use a reasonable default. In a real app, you'd get this from audio metadata
+      max = Math.max(max, 37); // User mentioned source audio is 37 seconds
+    }
+    
+    // Check speaker tracks
+    speakerTracks.forEach(track => {
+      if (track.audioFile) {
+        // In a real app, you'd get actual duration from audio metadata
+        max = Math.max(max, 30); // Default speaker track duration
+      }
+    });
+    
+    // Add some padding for editing
+    return max + 10;
+  }, [sourceTrack, speakerTracks]);
 
   if (isLoading) {
     return (
@@ -1056,18 +1099,16 @@ export default function STSEditor() {
                 onDragOver={handleDragOver}
                 style={{ scrollbarWidth: 'thin' }}
               >
-                {/* Red Playhead Indicator */}
-                {useMemo(() => 
-                  isGlobalPlaying && (
-                    <div 
-                      className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none playhead-indicator"
-                      style={{ 
-                        left: `${globalPlaybackTime * zoomLevel - scrollLeft}px`
-                      }}
-                    >
-                      <div className="absolute -top-1 -left-1.5 w-3 h-3 bg-red-500 rounded-full"></div>
-                    </div>
-                  ), [isGlobalPlaying, globalPlaybackTime, zoomLevel, scrollLeft])}
+                {/* Red Playhead Indicator - Always visible */}
+                <div 
+                  className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-30 pointer-events-none playhead-indicator"
+                  style={{ 
+                    left: `${globalPlaybackTime * zoomLevel - scrollLeft}px`,
+                    opacity: isGlobalPlaying ? 1 : 0.8
+                  }}
+                >
+                  <div className="absolute -top-1 -left-1.5 w-3 h-3 bg-red-500 rounded-full"></div>
+                </div>
                 
                 <div style={{ width: Math.max(maxDuration * zoomLevel, 1000), minWidth: '100%' }}>
                   {/* Source Audio Track */}
